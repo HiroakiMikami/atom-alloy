@@ -1,0 +1,17 @@
+{
+  "name": "atom-alloy",
+  "main": "./lib/atom-alloy",
+  "version": "0.0.0",
+  "description": "Alloy Analyzer and alloy language support for Atom editor.",
+  "keywords": [
+  ],
+  "activationCommands": {
+  },
+  "repository": "https://github.com/HiroakiMikami/atom-alloy",
+  "license": "MIT",
+  "engines": {
+    "atom": ">=1.0.0 <2.0.0"
+  },
+  "dependencies": {
+  }
+}
