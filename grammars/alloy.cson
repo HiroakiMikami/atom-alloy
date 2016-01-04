@@ -1,0 +1,53 @@
+name: 'alloy'
+scopeName: 'source.alloy'
+fileTypes: [
+  'als'
+]
+patterns: [
+  {
+    include: '#moduleDecl'
+  }
+  {
+    include: '#import'
+  }
+]
+
+repository:
+  # moduleDecl ::= "module" qualName ["["(name, )+"]]
+  moduleDecl:
+    patterns: [
+      {
+        name: 'meta.module.alloy'
+        begin: '^(module)\\b\\s*((?:\\w|\'|_|\\d|/)+)\\b\\s*(\\[)'
+        end: '(\\])'
+        beginCaptures:
+          1:
+            name: 'storage.type.module.alloy'
+          2:
+            name: 'meta.module.name.alloy'
+          3:
+            name: 'punctuation.type-parameters.begin.alloy'
+        endCaptures:
+          1:
+            name: 'punctuation.type-parameters.end.alloy'
+        patterns: [
+          {
+            match: '(?:\\w|\'|_|\\d)+'
+            name: 'meta.type-parameter.name.alloy'
+          }
+          {
+            match: ','
+            name: 'punctuation.type-parameters.separator.alloy'
+          }
+        ]
+      }
+      {
+        name: 'meta.module.alloy'
+        match: '^(module)\\b\\s*((?:\\w|\'|_|\\d|/)+)'
+        captures:
+          1:
+            name: 'storage.type.module.alloy'
+          2:
+            name: 'meta.module.name.alloy'
+      }
+    ]
