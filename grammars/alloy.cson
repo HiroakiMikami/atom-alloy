@@ -51,3 +51,49 @@ repository:
             name: 'meta.module.name.alloy'
       }
     ]
+  # import ::= "open" qualName ["[" (qualName,)+ "]"] ["as" name]
+  import:
+    patterns: [
+      {
+        name: 'meta.import.alloy'
+        begin: '^(open)\\b\\s*((?:\\w|_|\\d|/)+)\\b\\s*(\\[)'
+        end: '(\\])(?:\\s*(as)\\b\\s*((?:\\w|_|\\d)+))?'
+        beginCaptures:
+          1:
+            name: 'keyword.other.open.alloy'
+          2:
+            name: 'meta.module.name.alloy'
+          3:
+            name: 'punctuation.type-parameters.begin.alloy'
+        endCaptures:
+          1:
+            name: 'punctuation.type-parameters.end.alloy'
+          2:
+            name: 'keyword.other.as.alloy'
+          3:
+            name: 'meta.module.name.alloy'
+        patterns: [
+          {
+            match: '(?:\\w|_|\\d|/)+'
+            name: 'meta.type-parameter.name.alloy'
+          }
+          {
+            match: ','
+            name: 'punctuation.type-parameters.separator.alloy'
+          }
+        ]
+      }
+      {
+        name: 'meta.import.alloy'
+        match: '^(open)\\b\\s*((?:\\w|_|\\d|/)+)(?:\\b\\s*(as)\\b\\s*((?:\\w|_|\\d)+))?'
+        captures:
+          1:
+            name: 'keyword.other.open.alloy'
+          2:
+            name: 'meta.module.name.alloy'
+          3:
+            name: 'keyword.other.as.alloy'
+          4:
+            name: 'meta.module.name.alloy'
+      }
+    ]
