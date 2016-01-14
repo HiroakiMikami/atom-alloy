@@ -171,6 +171,27 @@ repository:
         name: 'punctuation.declaration.separator.alloy'
       }
     ]
+  predDecl:
+    name: 'meta.declaration.pred.alloy'
+    begin: '^(pred)\\b\\s*(?:((?:\\w|\'|_|\\d|/)+)\\.)?((?:\\w|\'|_|\\d)+)\\b\\s*(\\(||\\[)'
+    end: '(\\)|\\])'
+    beginCaptures:
+      1:
+        name: 'storage.type.pred.alloy'
+      2:
+        name: 'entity.name.function.pred.alloy'
+      3:
+        name: 'entity.name.function.pred.alloy'
+      4:
+        name: 'punctuation.declaration.pred.begin.alloy'
+    endCaptures:
+      1:
+        name: 'punctuation.declaration.pred.end.alloy'
+    patterns: [
+      {
+        include: '#code'
+      }
+    ]
   # decls ::= "{" decl* "}"
   block:
     begin: '(\\{)'
@@ -326,6 +347,9 @@ repository:
       }
       {
         include: '#sigDecl'
+      }
+      {
+        include: '#predDecl'
       }
       {
         include: '#block'
