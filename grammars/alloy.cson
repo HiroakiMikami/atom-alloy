@@ -1,0 +1,468 @@
+name: 'alloy'
+scopeName: 'source.alloy'
+fileTypes: [
+  'als'
+]
+patterns: [
+  {
+    include: '#moduleDecl'
+  }
+  {
+    include: '#import'
+  }
+  {
+    include: '#paragraph'
+  }
+]
+
+repository:
+  comments:
+    patterns: [
+      {
+        begin: '/\\*'
+        end: '\\*/'
+        name: 'comment.block.alloy'
+      }
+      {
+        begin: '//'
+        end: '\n'
+        name: 'comment.line.double-slash.alloy'
+      }
+      {
+        begin: '--'
+        end: '\n'
+        name: 'comment.line.double-dash.alloy'
+      }
+    ]
+
+  # moduleDecl ::= "module" qualName ["["(name, )+"]]
+  moduleDecl:
+    patterns: [
+      {
+        name: 'meta.module.alloy'
+        begin: '^(module)\\b\\s*((?:\\w|\'|_|\\d|/)+)\\b\\s*(\\[)'
+        end: '(\\])'
+        beginCaptures:
+          1:
+            name: 'storage.type.module.alloy'
+          2:
+            name: 'meta.module.name.alloy'
+          3:
+            name: 'punctuation.type-parameters.begin.alloy'
+        endCaptures:
+          1:
+            name: 'punctuation.type-parameters.end.alloy'
+        patterns: [
+          {
+            match: '(?:\\w|\'|_|\\d)+'
+            name: 'meta.type-parameter.name.alloy'
+          }
+          {
+            match: ','
+            name: 'punctuation.type-parameters.separator.alloy'
+          }
+        ]
+      }
+      {
+        name: 'meta.module.alloy'
+        match: '^(module)\\b\\s*((?:\\w|\'|_|\\d|/)+)'
+        captures:
+          1:
+            name: 'storage.type.module.alloy'
+          2:
+            name: 'meta.module.name.alloy'
+      }
+    ]
+  # import ::= "open" qualName ["[" (qualName,)+ "]"] ["as" name]
+  import:
+    patterns: [
+      {
+        name: 'meta.import.alloy'
+        begin: '^(open)\\b\\s*((?:\\w|\'|_|\\d|/)+)\\b\\s*(\\[)'
+        end: '(\\])(?:\\s*(as)\\b\\s*((?:\\w|\'|_|\\d)+))?'
+        beginCaptures:
+          1:
+            name: 'keyword.other.open.alloy'
+          2:
+            name: 'meta.module.name.alloy'
+          3:
+            name: 'punctuation.type-parameters.begin.alloy'
+        endCaptures:
+          1:
+            name: 'punctuation.type-parameters.end.alloy'
+          2:
+            name: 'keyword.other.as.alloy'
+          3:
+            name: 'meta.module.name.alloy'
+        patterns: [
+          {
+            match: '(?:\\w|\'|_|\\d|/)+'
+            name: 'meta.type-parameter.name.alloy'
+          }
+          {
+            match: ','
+            name: 'punctuation.type-parameters.separator.alloy'
+          }
+        ]
+      }
+      {
+        name: 'meta.import.alloy'
+        match: '^(open)\\b\\s*((?:\\w|\'|_|\\d|/)+)(?:\\b\\s*(as)\\b\\s*((?:\\w|\'|_|\\d)+))?'
+        captures:
+          1:
+            name: 'keyword.other.open.alloy'
+          2:
+            name: 'meta.module.name.alloy'
+          3:
+            name: 'keyword.other.as.alloy'
+          4:
+            name: 'meta.module.name.alloy'
+      }
+    ]
+  # sigDecl ::= [abstract] [mult] "sig" (name,)+ [sigExt]
+  sigDecl:
+    name: 'meta.declaration.signature.alloy'
+    begin: '^(?:(abstract)\\b\\s+)?(?:(lone|some|one)\\b\\s+)?(sig)\\b\\s*'
+    end: '(?=\\{)'
+    beginCaptures:
+      1:
+        name: 'storage.modifier.abstract.alloy'
+      2:
+        name: 'storage.modifier.mult.alloy'
+      3:
+        name: 'storage.type.signature.alloy'
+    patterns: [
+      {
+        begin: '(extends)'
+        end: '(?=\\{)'
+        beginCaptures:
+          1:
+            name: 'keyword.other.extends.alloy'
+        patterns: [
+          {
+            match: '(?:\\w|\'|_|\\d|/)+'
+            name: 'entity.other.inherited-class.alloy'
+          }
+        ]
+      }
+      {
+        begin: '(in)'
+        end: '(?=\\{)'
+        beginCaptures:
+          1:
+            name: 'keyword.other.in.alloy'
+        patterns: [
+          {
+            match: '(?:\\w|\'|_|\\d|/)+'
+            name: 'entity.other.inherited-class.alloy'
+          }
+          {
+            match: '\\+'
+            name: 'keyword.operator.plus.alloy'
+          }
+        ]
+      }
+      {
+        match: '(?:\\w|\'|_|\\d|/)+'
+        name: 'entity.name.type.signature.alloy'
+      }
+      {
+        match: ','
+        name: 'punctuation.declaration.separator.alloy'
+      }
+    ]
+  predDecl:
+    name: 'meta.declaration.pred.alloy'
+    begin: '^(pred)\\b\\s*(?:((?:\\w|\'|_|\\d|/)+)\\.)?((?:\\w|\'|_|\\d)+)\\b\\s*(\\(||\\[)'
+    end: '(\\)|\\])'
+    beginCaptures:
+      1:
+        name: 'storage.type.pred.alloy'
+      2:
+        name: 'entity.name.function.pred.alloy'
+      3:
+        name: 'entity.name.function.pred.alloy'
+      4:
+        name: 'punctuation.declaration.pred.begin.alloy'
+    endCaptures:
+      1:
+        name: 'punctuation.declaration.pred.end.alloy'
+    patterns: [
+      {
+        include: '#code'
+      }
+    ]
+  funDecl:
+    name: 'meta.declaration.function.alloy'
+    begin: '^(fun)\\b\\s*(?:((?:\\w|\'|_|\\d|/)+)\\.)?((?:\\w|\'|_|\\d)+)\\b\\s*(\\(|\\[)'
+    end: '(\\)|\\])\\s*:'
+    beginCaptures:
+      1:
+        name: 'storage.type.fun.alloy'
+      2:
+        name: 'entity.name.function.fun.alloy'
+      3:
+        name: 'entity.name.function.fun.alloy'
+      4:
+        name: 'punctuation.declaration.fun.begin.alloy'
+    endCaptures:
+      1:
+        name: 'punctuation.declaration.fun.end.alloy'
+  factDecl:
+    name: 'meta.declaration.fact.alloy'
+    match: '^(fact)\\b\\s*((?:\\w|\'|_|\\d)+)'
+    captures:
+      1:
+        name: 'storage.type.fact.alloy'
+      2:
+        name: 'entity.name.function.fact.alloy'
+  assertDecl:
+    name: 'meta.declaration.assert.alloy'
+    match: '^(assert)\\b\\s*((?:\\w|\'|_|\\d)+)'
+    captures:
+      1:
+        name: 'storage.type.assert.alloy'
+      2:
+        name: 'entity.name.function.assert.alloy'
+  cmdDecl:
+    patterns: [
+      {
+        name: 'meta.declaration.command.alloy'
+        match: '^(?:((?:\\w|\'|_|\\d)+):\\s*)?(?:(run)|(check))\\b\\s*((?:\\w|\'|_|\\d|/)+)'
+        captures:
+          1:
+            name: 'entity.name.function.command.alloy'
+          2:
+            name: 'keyword.control.run.alloy'
+          3:
+            name: 'keyword.control.check.alloy'
+          4:
+            name: 'meta.function.name.alloy'
+      }
+      {
+        name: 'meta.declaration.command.alloy'
+        begin: '^(?:((?:\\w|\'|_|\\d)+):\\s*)?(?:(run)|(check))\\b\\s*(\\{)'
+        end: '(\\})'
+        beginCaptures:
+          1:
+            name: 'entity.name.function.command.alloy'
+          2:
+            name: 'keyword.control.run.alloy'
+          3:
+            name: 'keyword.control.check.alloy'
+          4:
+            name: 'punctuation.block.begin.alloy'
+        endCaptures:
+          1:
+            name: 'punctuation.block.end.alloy'
+        patterns: [
+          {
+            include: '#code'
+          }
+        ]
+      }
+    ]
+  scope:
+    name: 'meta.scope.alloy'
+    begin: '(for)'
+    beginCaptures:
+      1:
+        name: 'keyword.control.for.alloy'
+    end: '\n' # TODO
+    patterns: [
+      {
+        match: '(-)?(\\d+)'
+        name: 'constant.numeric.alloy'
+      }
+      {
+        match: 'but'
+        name: 'keyword.control.but.alloy'
+      }
+      {
+        match: 'exactly'
+        name: 'keyword.control.exactly.alloy'
+      }
+      {
+        match: '(?:\\w|\'|_|\\d|/)+'
+        name: 'meta.signature.name.alloy'
+      }
+    ]
+
+  # decls ::= "{" decl* "}"
+  block:
+    begin: '(\\{)'
+    end: '(\\})'
+    name: 'meta.block.alloy'
+
+    beginCaptures:
+      1:
+        name: 'punctuation.block.begin.alloy'
+    endCaptures:
+      1:
+        name: 'punctuation.block.end.alloy'
+    patterns: [
+      {
+        include: '#code'
+      }
+    ]
+  code:
+    patterns: [
+      {
+        include: '#comments'
+      }
+      {
+        include: '#expr'
+      }
+    ]
+  expr:
+    patterns: [
+      {
+        include: '#constants'
+      }
+      {
+        include: '#keywords'
+      }
+      {
+        include: '#operators'
+      }
+      {
+        begin: '(\\()'
+        end: '(\\))'
+        beginCaptures:
+          1:
+            name: 'punctuation.bracket.begin.alloy'
+        endCaptures:
+          1:
+            name: 'punctuation.bracket.end.alloy'
+        patterns: [
+          {
+            include: '#code'
+          }
+        ]
+      }
+      {
+        begin: '(\\[)'
+        end: '(\\])'
+        beginCaptures:
+          1:
+            name: 'punctuation.bracket.begin.alloy'
+        endCaptures:
+          1:
+            name: 'punctuation.bracket.end.alloy'
+        patterns: [
+          {
+            include: '#code'
+          }
+        ]
+      }
+      {
+        match: '(?:\\w|\'|_|\\d|/)+'
+        name: 'meta.signature.name.alloy'
+      }
+      {
+        include: '#block'
+      }
+    ]
+  constants:
+    patterns: [
+      {
+        match: '(-)?(\\d+)'
+        name: 'constant.numeric.alloy'
+      }
+      {
+        match: 'none|univ|iden'
+        name: 'constant.language.alloy'
+      }
+    ]
+  operators:
+    patterns: [
+      {
+        match: '@'
+        name: 'keyword.operator.atmark.alloy'
+      }
+      {
+        include: '#modifier'
+      }
+      {
+        include: '#arrowOp'
+      }
+      {
+        include: '#compareOp'
+      }
+      {
+        include: '#binOp'
+      }
+      {
+        include: '#unOp'
+      }
+    ]
+  modifier:
+    match: 'all|disj|lone|no|one|set|some|sum'
+    name: 'storage.modifier.alloy'
+  unOp:
+    match: '!|not|#|~|\\*|\\^'
+    name: 'keyword.operator.unOp.alloy'
+  binOp:
+    match: '(?:\\|\\|)|or|&&|and|<=>|iff|=>|implies|&|\\+|-|\\+\\+|<:|:>|\\.'
+    name: 'keyword.operator.binOp.alloy'
+  arrowOp:
+    match: '(?:(lone|some|one|set)\\b\\s)?(->)(?:(lone|some|one|set)\\b\\s)?'
+    captures:
+      1:
+        name: 'storage.modifier.alloy'
+      2:
+        name: 'keyword.operator.arrowOp.alloy'
+      3:
+        name: 'storage.modifier.alloy'
+  compareOp:
+    match: 'in|=|<|>|=<|>='
+    name: 'keyword.operator.compareOp.alloy'
+  keywords:
+    patterns: [
+      {
+        match: 'this'
+        name: 'variable.language.this.alloy'
+      }
+      {
+        match: 'else'
+        name: 'keyword.operator.else.alloy'
+      }
+      {
+        match: 'let'
+        name: 'keyword.control.let.alloy'
+      }
+      {
+        match: '\\|'
+        name: 'keyword.other.bar.alloy'
+      }
+    ]
+  paragraph:
+    patterns: [
+      {
+        include: '#comments'
+      }
+      {
+        include: '#sigDecl'
+      }
+      {
+        include: '#predDecl'
+      }
+      {
+        include: '#funDecl'
+      }
+      {
+        include: '#factDecl'
+      }
+      {
+        include: '#assertDecl'
+      }
+      {
+        include: '#cmdDecl'
+      }
+      {
+        include: '#scope'
+      }
+      {
+        include: '#block'
+      }
+    ]
