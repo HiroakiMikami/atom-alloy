@@ -208,6 +208,14 @@ repository:
     endCaptures:
       1:
         name: 'punctuation.declaration.fun.end.alloy'
+  factDecl:
+    name: 'meta.declaration.fact.alloy'
+    match: '^(fact)\\b\\s*((?:\\w|\'|_|\\d)+)'
+    captures:
+      1:
+        name: 'storage.type.fact.alloy'
+      2:
+        name: 'entity.name.function.fact.alloy'
   # decls ::= "{" decl* "}"
   block:
     begin: '(\\{)'
@@ -369,6 +377,9 @@ repository:
       }
       {
         include: '#funDecl'
+      }
+      {
+        include: '#factDecl'
       }
       {
         include: '#block'
