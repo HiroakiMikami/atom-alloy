@@ -204,3 +204,58 @@ describe "Alloy grammar", ->
       "meta.block.alloy",
       "punctuation.block.end.alloy"
     ]
+  it "tokenizes predicates", ->
+    lines = grammar.tokenizeLines """
+    pred foo(bar: Bar) {
+    }"""
+    expect(lines[0][0]).toEqual value: "pred", scopes: [
+      "source.alloy",
+      "meta.declaration.pred.alloy"
+      "storage.type.pred.alloy"
+    ]
+    expect(lines[0][1]).toEqual value: " ", scopes: [
+      "source.alloy",
+      "meta.declaration.pred.alloy"
+    ]
+    expect(lines[0][2]).toEqual value: "foo", scopes: [
+      "source.alloy",
+      "meta.declaration.pred.alloy"
+      "entity.name.function.pred.alloy"
+    ]
+    expect(lines[0][3]).toEqual value: "(", scopes: [
+      "source.alloy",
+      "meta.declaration.pred.alloy",
+      "punctuation.declaration.pred.begin.alloy"
+    ]
+    expect(lines[0][4]).toEqual value: "bar", scopes: [
+      "source.alloy",
+      "meta.declaration.pred.alloy",
+      "meta.signature.name.alloy"
+    ]
+    expect(lines[0][5]).toEqual value: ": ", scopes: [
+      "source.alloy",
+      "meta.declaration.pred.alloy"
+    ]
+    expect(lines[0][6]).toEqual value: "Bar", scopes: [
+      "source.alloy",
+      "meta.declaration.pred.alloy",
+      "meta.signature.name.alloy"
+    ]
+    expect(lines[0][7]).toEqual value: ")", scopes: [
+      "source.alloy",
+      "meta.declaration.pred.alloy"
+      "punctuation.declaration.pred.end.alloy"
+    ]
+    expect(lines[0][8]).toEqual value: " ", scopes: [
+      "source.alloy"
+    ]
+    expect(lines[0][9]).toEqual value: "{", scopes: [
+      "source.alloy",
+      "meta.block.alloy",
+      "punctuation.block.begin.alloy"
+    ]
+    expect(lines[1][0]).toEqual value: "}", scopes: [
+      "source.alloy",
+      "meta.block.alloy",
+      "punctuation.block.end.alloy"
+    ]
