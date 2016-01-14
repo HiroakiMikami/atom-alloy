@@ -10,9 +10,31 @@ patterns: [
   {
     include: '#import'
   }
+  {
+    include: '#paragraph'
+  }
 ]
 
 repository:
+  comments:
+    patterns: [
+      {
+        begin: '/\\*'
+        end: '\\*/'
+        name: 'comment.block.alloy'
+      }
+      {
+        begin: '//'
+        end: '\n'
+        name: 'comment.line.double-slash.alloy'
+      }
+      {
+        begin: '--'
+        end: '\n'
+        name: 'comment.line.double-dash.alloy'
+      }
+    ]
+
   # moduleDecl ::= "module" qualName ["["(name, )+"]]
   moduleDecl:
     patterns: [
@@ -95,5 +117,217 @@ repository:
             name: 'keyword.other.as.alloy'
           4:
             name: 'meta.module.name.alloy'
+      }
+    ]
+  # sigDecl ::= [abstract] [mult] "sig" (name,)+ [sigExt]
+  sigDecl:
+    name: 'meta.declaration.signature.alloy'
+    begin: '^(?:(abstract)\\b\\s+)?(?:(lone|some|one)\\b\\s+)?(sig)\\b\\s*'
+    end: '(?=\\{)'
+    beginCaptures:
+      1:
+        name: 'storage.modifier.abstract.alloy'
+      2:
+        name: 'storage.modifier.mult.alloy'
+      3:
+        name: 'storage.type.signature.alloy'
+    patterns: [
+      {
+        begin: '(extends)'
+        end: '(?=\\{)'
+        beginCaptures:
+          1:
+            name: 'keyword.other.extends.alloy'
+        patterns: [
+          {
+            match: '(?:\\w|\'|_|\\d|/)+'
+            name: 'entity.other.inherited-class.alloy'
+          }
+        ]
+      }
+      {
+        begin: '(in)'
+        end: '(?=\\{)'
+        beginCaptures:
+          1:
+            name: 'keyword.other.in.alloy'
+        patterns: [
+          {
+            match: '(?:\\w|\'|_|\\d|/)+'
+            name: 'entity.other.inherited-class.alloy'
+          }
+          {
+            match: '\\+'
+            name: 'keyword.operator.plus.alloy'
+          }
+        ]
+      }
+      {
+        match: '(?:\\w|\'|_|\\d|/)+'
+        name: 'entity.name.type.signature.alloy'
+      }
+      {
+        match: ','
+        name: 'punctuation.declaration.separator.alloy'
+      }
+    ]
+  # decls ::= "{" decl* "}"
+  block:
+    begin: '(\\{)'
+    end: '(\\})'
+    name: 'meta.block.alloy'
+
+    beginCaptures:
+      1:
+        name: 'punctuation.block.begin.alloy'
+    endCaptures:
+      1:
+        name: 'punctuation.block.end.alloy'
+    patterns: [
+      {
+        include: '#code'
+      }
+    ]
+  code:
+    patterns: [
+      {
+        include: '#comments'
+      }
+      {
+        include: '#expr'
+      }
+    ]
+  expr:
+    patterns: [
+      {
+        include: '#constants'
+      }
+      {
+        include: '#keywords'
+      }
+      {
+        include: '#operators'
+      }
+      {
+        begin: '(\\()'
+        end: '(\\))'
+        beginCaptures:
+          1:
+            name: 'punctuation.bracket.begin.alloy'
+        endCaptures:
+          1:
+            name: 'punctuation.bracket.end.alloy'
+        patterns: [
+          {
+            include: '#code'
+          }
+        ]
+      }
+      {
+        begin: '(\\[)'
+        end: '(\\])'
+        beginCaptures:
+          1:
+            name: 'punctuation.bracket.begin.alloy'
+        endCaptures:
+          1:
+            name: 'punctuation.bracket.end.alloy'
+        patterns: [
+          {
+            include: '#code'
+          }
+        ]
+      }
+      {
+        match: '(?:\\w|\'|_|\\d|/)+'
+        name: 'meta.signature.name.alloy'
+      }
+      {
+        include: '#block'
+      }
+    ]
+  constants:
+    patterns: [
+      {
+        match: '(-)?(\\d+)'
+        name: 'constant.numeric.alloy'
+      }
+      {
+        match: 'none|univ|iden'
+        name: 'constant.language.alloy'
+      }
+    ]
+  operators:
+    patterns: [
+      {
+        match: '@'
+        name: 'keyword.operator.atmark.alloy'
+      }
+      {
+        include: '#modifier'
+      }
+      {
+        include: '#arrowOp'
+      }
+      {
+        include: '#compareOp'
+      }
+      {
+        include: '#binOp'
+      }
+      {
+        include: '#unOp'
+      }
+    ]
+  modifier:
+    match: 'all|disj|lone|no|one|set|some|sum'
+    name: 'storage.modifier.alloy'
+  unOp:
+    match: '!|not|#|~|\\*|\\^'
+    name: 'keyword.operator.unOp.alloy'
+  binOp:
+    match: '(?:\\|\\|)|or|&&|and|<=>|iff|=>|implies|&|\\+|-|\\+\\+|<:|:>|\\.'
+    name: 'keyword.operator.binOp.alloy'
+  arrowOp:
+    match: '(?:(lone|some|one|set)\\b\\s)?(->)(?:(lone|some|one|set)\\b\\s)?'
+    captures:
+      1:
+        name: 'storage.modifier.alloy'
+      2:
+        name: 'keyword.operator.arrowOp.alloy'
+      3:
+        name: 'storage.modifier.alloy'
+  compareOp:
+    match: 'in|=|<|>|=<|>='
+    name: 'keyword.operator.compareOp.alloy'
+  keywords:
+    patterns: [
+      {
+        match: 'this'
+        name: 'variable.language.this.alloy'
+      }
+      {
+        match: 'else'
+        name: 'keyword.operator.else.alloy'
+      }
+      {
+        match: 'let'
+        name: 'keyword.control.let.alloy'
+      }
+      {
+        match: '\\|'
+        name: 'keyword.other.bar.alloy'
+      }
+    ]
+  paragraph:
+    patterns: [
+      {
+        include: '#comments'
+      }
+      {
+        include: '#sigDecl'
+      }
+      {
+        include: '#block'
       }
     ]
