@@ -216,6 +216,14 @@ repository:
         name: 'storage.type.fact.alloy'
       2:
         name: 'entity.name.function.fact.alloy'
+  assertDecl:
+    name: 'meta.declaration.assert.alloy'
+    match: '^(assert)\\b\\s*((?:\\w|\'|_|\\d)+)'
+    captures:
+      1:
+        name: 'storage.type.assert.alloy'
+      2:
+        name: 'entity.name.function.assert.alloy'
   # decls ::= "{" decl* "}"
   block:
     begin: '(\\{)'
@@ -380,6 +388,9 @@ repository:
       }
       {
         include: '#factDecl'
+      }
+      {
+        include: '#assertDecl'
       }
       {
         include: '#block'
