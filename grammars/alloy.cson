@@ -224,6 +224,70 @@ repository:
         name: 'storage.type.assert.alloy'
       2:
         name: 'entity.name.function.assert.alloy'
+  cmdDecl:
+    patterns: [
+      {
+        name: 'meta.declaration.command.alloy'
+        match: '^(?:((?:\\w|\'|_|\\d)+):\\s*)?(?:(run)|(check))\\b\\s*((?:\\w|\'|_|\\d|/)+)'
+        captures:
+          1:
+            name: 'entity.name.function.command.alloy'
+          2:
+            name: 'keyword.control.run.alloy'
+          3:
+            name: 'keyword.control.check.alloy'
+          4:
+            name: 'meta.function.name.alloy'
+      }
+      {
+        name: 'meta.declaration.command.alloy'
+        begin: '^(?:((?:\\w|\'|_|\\d)+):\\s*)?(?:(run)|(check))\\b\\s*(\\{)'
+        end: '(\\})'
+        beginCaptures:
+          1:
+            name: 'entity.name.function.command.alloy'
+          2:
+            name: 'keyword.control.run.alloy'
+          3:
+            name: 'keyword.control.check.alloy'
+          4:
+            name: 'punctuation.block.begin.alloy'
+        endCaptures:
+          1:
+            name: 'punctuation.block.end.alloy'
+        patterns: [
+          {
+            include: '#code'
+          }
+        ]
+      }
+    ]
+  scope:
+    name: 'meta.scope.alloy'
+    begin: '(for)'
+    beginCaptures:
+      1:
+        name: 'keyword.control.for.alloy'
+    end: '\n' # TODO
+    patterns: [
+      {
+        match: '(-)?(\\d+)'
+        name: 'constant.numeric.alloy'
+      }
+      {
+        match: 'but'
+        name: 'keyword.control.but.alloy'
+      }
+      {
+        match: 'exactly'
+        name: 'keyword.control.exactly.alloy'
+      }
+      {
+        match: '(?:\\w|\'|_|\\d|/)+'
+        name: 'meta.signature.name.alloy'
+      }
+    ]
+
   # decls ::= "{" decl* "}"
   block:
     begin: '(\\{)'
@@ -391,6 +455,12 @@ repository:
       }
       {
         include: '#assertDecl'
+      }
+      {
+        include: '#cmdDecl'
+      }
+      {
+        include: '#scope'
       }
       {
         include: '#block'
