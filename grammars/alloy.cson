@@ -192,6 +192,22 @@ repository:
         include: '#code'
       }
     ]
+  funDecl:
+    name: 'meta.declaration.function.alloy'
+    begin: '^(fun)\\b\\s*(?:((?:\\w|\'|_|\\d|/)+)\\.)?((?:\\w|\'|_|\\d)+)\\b\\s*(\\(|\\[)'
+    end: '(\\)|\\])\\s*:'
+    beginCaptures:
+      1:
+        name: 'storage.type.fun.alloy'
+      2:
+        name: 'entity.name.function.fun.alloy'
+      3:
+        name: 'entity.name.function.fun.alloy'
+      4:
+        name: 'punctuation.declaration.fun.begin.alloy'
+    endCaptures:
+      1:
+        name: 'punctuation.declaration.fun.end.alloy'
   # decls ::= "{" decl* "}"
   block:
     begin: '(\\{)'
@@ -350,6 +366,9 @@ repository:
       }
       {
         include: '#predDecl'
+      }
+      {
+        include: '#funDecl'
       }
       {
         include: '#block'
