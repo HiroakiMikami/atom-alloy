@@ -56,8 +56,8 @@ repository:
     patterns: [
       {
         name: 'meta.import.alloy'
-        begin: '^(open)\\b\\s*((?:\\w|_|\\d|/)+)\\b\\s*(\\[)'
-        end: '(\\])(?:\\s*(as)\\b\\s*((?:\\w|_|\\d)+))?'
+        begin: '^(open)\\b\\s*((?:\\w|\'|_|\\d|/)+)\\b\\s*(\\[)'
+        end: '(\\])(?:\\s*(as)\\b\\s*((?:\\w|\'|_|\\d)+))?'
         beginCaptures:
           1:
             name: 'keyword.other.open.alloy'
@@ -74,7 +74,7 @@ repository:
             name: 'meta.module.name.alloy'
         patterns: [
           {
-            match: '(?:\\w|_|\\d|/)+'
+            match: '(?:\\w|\'|_|\\d|/)+'
             name: 'meta.type-parameter.name.alloy'
           }
           {
@@ -85,7 +85,7 @@ repository:
       }
       {
         name: 'meta.import.alloy'
-        match: '^(open)\\b\\s*((?:\\w|_|\\d|/)+)(?:\\b\\s*(as)\\b\\s*((?:\\w|_|\\d)+))?'
+        match: '^(open)\\b\\s*((?:\\w|\'|_|\\d|/)+)(?:\\b\\s*(as)\\b\\s*((?:\\w|\'|_|\\d)+))?'
         captures:
           1:
             name: 'keyword.other.open.alloy'
