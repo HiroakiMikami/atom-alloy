@@ -259,3 +259,82 @@ describe "Alloy grammar", ->
       "meta.block.alloy",
       "punctuation.block.end.alloy"
     ]
+  it "tokenizes commands", ->
+    {tokens} = grammar.tokenizeLine "foo: run test for 3 but exactly 1 Bar"
+
+    expect(tokens[0]).toEqual value: "foo", scopes: [
+      "source.alloy",
+      "meta.declaration.command.alloy",
+      "entity.name.function.command.alloy"
+    ]
+    expect(tokens[1]).toEqual value: ": ", scopes: [
+      "source.alloy",
+      "meta.declaration.command.alloy"
+    ]
+    expect(tokens[2]).toEqual value: "run", scopes: [
+      "source.alloy",
+      "meta.declaration.command.alloy",
+      "keyword.control.run.alloy"
+    ]
+    expect(tokens[3]).toEqual value: " ", scopes: [
+      "source.alloy",
+      "meta.declaration.command.alloy"
+    ]
+    expect(tokens[4]).toEqual value: "test", scopes: [
+      "source.alloy",
+      "meta.declaration.command.alloy",
+      "meta.function.name.alloy"
+    ]
+    expect(tokens[5]).toEqual value: " ", scopes: [
+      "source.alloy"
+    ]
+    expect(tokens[6]).toEqual value: "for", scopes: [
+      "source.alloy",
+      "meta.scope.alloy",
+      "keyword.control.for.alloy"
+    ]
+    expect(tokens[7]).toEqual value: " ", scopes: [
+      "source.alloy",
+      "meta.scope.alloy"
+    ]
+    expect(tokens[8]).toEqual value: "3", scopes: [
+      "source.alloy",
+      "meta.scope.alloy",
+      "constant.numeric.alloy"
+    ]
+    expect(tokens[9]).toEqual value: " ", scopes: [
+      "source.alloy",
+      "meta.scope.alloy"
+    ]
+    expect(tokens[10]).toEqual value: "but", scopes: [
+      "source.alloy",
+      "meta.scope.alloy"
+      "keyword.control.but.alloy"
+    ]
+    expect(tokens[11]).toEqual value: " ", scopes: [
+      "source.alloy",
+      "meta.scope.alloy"
+    ]
+    expect(tokens[12]).toEqual value: "exactly", scopes: [
+      "source.alloy",
+      "meta.scope.alloy"
+      "keyword.control.exactly.alloy"
+    ]
+    expect(tokens[13]).toEqual value: " ", scopes: [
+      "source.alloy",
+      "meta.scope.alloy"
+    ]
+    expect(tokens[14]).toEqual value: "1", scopes: [
+      "source.alloy",
+      "meta.scope.alloy",
+      "constant.numeric.alloy"
+    ]
+    expect(tokens[15]).toEqual value: " ", scopes: [
+      "source.alloy",
+      "meta.scope.alloy"
+    ]
+    expect(tokens[16]).toEqual value: "Bar", scopes: [
+      "source.alloy",
+      "meta.scope.alloy"
+      "meta.signature.name.alloy"
+    ]
