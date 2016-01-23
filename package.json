@@ -3,6 +3,13 @@
   "main": "./lib/atom-alloy",
   "version": "0.0.0",
   "description": "Alloy Analyzer and alloy language support for Atom editor.",
+  "consumedServices": {
+      "status-bar": {
+        "versions": {
+          "^1.0.0": "consumeStatusBar"
+        }
+      }
+    },
   "keywords": [
   ],
   "activationCommands": {
