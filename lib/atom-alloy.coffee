@@ -27,6 +27,8 @@ module.exports = AtomAlloy =
 
     # Register command that toggles this view
     @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:compile': => @compile()
+    @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:execute': => @execute()
+    @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:execute-all': => @executeAll()
 
   consumeStatusBar: (statusBar) ->
     @atomAlloyView.consumeStatusBar(statusBar)
@@ -41,11 +43,21 @@ module.exports = AtomAlloy =
   serialize: ->
     atomAlloyState: @atomAlloyView.serialize()
 
-  compile: ->
-    # Get a filepath of the active editor
+  getActivePath: () ->
+    # Get a path of the active editor
     editor = atom.workspace.getActiveTextEditor()
-    return unless editor?
+    return editor?.getPath()
 
-    path = editor.getPath()
+  compile: ->
+    path = @getActivePath()
+    return unless path?
 
     @alloy.compile(path)
+
+  execute: ->
+    path = @getActivePath()
+    return unless path?
+
+  executeAll: ->
+    path = @getActivePath()
+    return unless path?
