@@ -1,9 +1,11 @@
 Alloy = require './alloy'
+AlloyCommandPaletteView = require './alloy-command-palette-view'
 AtomAlloyView = require './atom-alloy-view'
 {CompositeDisposable} = require 'atom'
 
 module.exports = AtomAlloy =
   atomAlloyView: null
+  alloyCommandPaletteView: null
   alloy: null
   subscriptions: null
 
@@ -15,9 +17,12 @@ module.exports = AtomAlloy =
 
   activate: (state) ->
     @alloy = new Alloy(atom.config.get("atom-alloy.alloyJar"))
+
     @atomAlloyView = new AtomAlloyView(status.atomAlloyViewState)
 
-    # Wires between Alloy and AtomAlloyView
+    @alloyCommandPaletteView = new AlloyCommandPaletteView()
+
+    # Wires between the components
     @alloy.onCompileStarted(@atomAlloyView.onCompileStarted)
     @alloy.onCompileDone(@atomAlloyView.onCompileDone)
     @alloy.onCompileError(@atomAlloyView.onCompileError)
@@ -35,8 +40,13 @@ module.exports = AtomAlloy =
 
   deactivate: ->
     @subscriptions.dispose()
+
     @atomAlloyView?.destroy()
     @atomAlloyView = null
+
+    @alloyCommandPaletteView?.destroy()
+    @alloyCommandPaletteView = null
+
     @alloy.destroy()
     @alloy = null
 
@@ -55,9 +65,34 @@ module.exports = AtomAlloy =
     @alloy.compile(path)
 
   execute: ->
-    path = @getActivePath()
-    return unless path?
+    callback = @alloy.onCompileDone((result) =>
+      # Obtain the world instance
+      world = result.result
+
+      # Obtain list of commands
+      commands = @alloy.getCommands(world)
+
+      # Open palette to select a command
+      @alloyCommandPaletteView.open(commands)
+
+      # Remove this callback
+      callback.dispose()
+    )
+
+    # Compile alloy files
+    @compile()
 
   executeAll: ->
-    path = @getActivePath()
-    return unless path?
+    callback = @alloy.onCompileDone((result) =>
+      # Obtain the world instance
+      world = result.result
+
+      # Obtain list of commands
+      commands = @alloy.getCommands(world)
+
+      # Remove this callback
+      callback.dispose()
+    )
+
+    # Compile alloy files
+    @compile()
