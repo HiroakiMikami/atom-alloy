@@ -20,9 +20,9 @@ class AtomAlloyView
     @statusBarTile?.destroy()
 
   # Event callback functions
-  onCompileStarted: (path) =>
+  compileStarted: (path) =>
     @element.innerText = "Alloy4: compiling #{@getFilename(path)}..." if @element?
-  onCompileError: (result) =>
+  compileError: (result) =>
     # extract error message from result.err
     errorMessage = ""
     lines = result.err.message.split("\n")
@@ -38,7 +38,7 @@ class AtomAlloyView
       detail: errorMessage
     })
     @element.innerText = ""
-  onCompileDone: (result) =>
+  compileDone: (result) =>
     atom.notifications.addSuccess("Atom Alloy", {
       detail: "succeed in compiling #{@getFilename(result.path)}"
     })

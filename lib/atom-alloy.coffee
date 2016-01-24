@@ -23,9 +23,9 @@ module.exports = AtomAlloy =
     @alloyCommandPaletteView = new AlloyCommandPaletteView()
 
     # Wires between the components
-    @alloy.onCompileStarted(@atomAlloyView.onCompileStarted)
-    @alloy.onCompileDone(@atomAlloyView.onCompileDone)
-    @alloy.onCompileError(@atomAlloyView.onCompileError)
+    @alloy.onCompileStarted(@atomAlloyView.compileStarted)
+    @alloy.onCompileDone(@atomAlloyView.compileDone)
+    @alloy.onCompileError(@atomAlloyView.compileError)
 
     # Events subscribed to in atom's system can be easily cleaned up with a CompositeDisposable
     @subscriptions = new CompositeDisposable
