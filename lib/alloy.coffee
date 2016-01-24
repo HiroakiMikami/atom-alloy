@@ -116,7 +116,8 @@ class Alloy
           result.writeXML(filename)
           @executedCommands[serializedCommand] = {
             time: lastModifiedTime,
-            filename: filename
+            filename: filename,
+            solution: result
           }
 
           @emitter.emit("ExecuteDone", {
@@ -139,7 +140,18 @@ class Alloy
       result = @executedCommands[serializedCommand]
       return unless result?
 
-      Alloy.java.newInstance("edu.mit.csail.sdg.alloy4viz.VizGUI", false, result.filename, null)
+      evaluator = Alloy.java.newProxy("edu.mit.csail.sdg.alloy4.Computer", {
+        compute: (input) =>
+          if typeof(input) is "string"
+            e = Alloy.compUtil.parseOneExpression_fromStringSync(world, input);
+            return result.solution.evalSync(e) + ""
+          else
+            return input + ""
+        })
+
+      Alloy.java.newInstance(
+        "edu.mit.csail.sdg.alloy4viz.VizGUI",
+        false, result.filename, null, null, evaluator)
 
       if calback?
         callback.dispose()
