@@ -11,6 +11,7 @@
       }
     },
   "keywords": [
+    "alloy"
   ],
   "activationCommands": {
     "atom-workspace": [
@@ -23,6 +24,14 @@
   },
   "repository": "https://github.com/HiroakiMikami/atom-alloy",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HiroakiMikami/atom-alloy.git"
+  },
+  "readmeFilename": "README.md",
+  "bugs": {
+    "url": "https://github.com/HiroakiMikami/atom-alloy/issues"
+  },
   "engines": {
     "atom": ">=1.0.0 <2.0.0"
   },
