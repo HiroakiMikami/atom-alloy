@@ -13,6 +13,13 @@
   "keywords": [
   ],
   "activationCommands": {
+    "atom-workspace": [
+      "atom-alloy:compile",
+      "atom-alloy:execute",
+      "atom-alloy:execute-all",
+      "atom-alloy:visualize",
+      "atom-alloy:visualize-all"
+    ]
   },
   "repository": "https://github.com/HiroakiMikami/atom-alloy",
   "license": "MIT",
