@@ -9,3 +9,5 @@
 # https://atom.io/docs/latest/behind-atom-keymaps-in-depth
 'atom-workspace':
   'ctrl-b': 'atom-alloy:compile'
+  'ctrl-e': 'atom-alloy:execute'
+  'ctrl-E': 'atom-alloy:execute-all'

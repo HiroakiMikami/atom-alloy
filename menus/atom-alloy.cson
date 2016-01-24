@@ -13,6 +13,14 @@
         {
           'label': 'Compile'
           'command': 'atom-alloy:compile'
+        },
+        {
+          'label': "Execute"
+          'command': 'atom-alloy:execute'
+        },
+        {
+          'label': "Execute All Commands"
+          'command': 'atom-alloy:execute-all'
         }
       ]
     ]
