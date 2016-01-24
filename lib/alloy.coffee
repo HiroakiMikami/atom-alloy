@@ -1,5 +1,5 @@
-{Emitter} = require 'atom'
-fs = require 'fs'
+Emitter = null
+fs = null
 
 module.exports =
 class Alloy
@@ -44,6 +44,9 @@ class Alloy
     @options.solver = solver
 
   constructor: (@alloyJarPath, @solver, @tmpDirectory) ->
+    Emitter ?= require('atom').Emitter
+    fs ?= require 'fs'
+
     @emitter = new Emitter()
     @executedCommands = {}
 
