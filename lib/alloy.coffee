@@ -129,6 +129,27 @@ class Alloy
     for command in commands
       @executeCommandIfNecessary(path, world, command)
 
+  visualizeCommand: (path, world, command) =>
+    serializedCommand = {
+      label: command.label
+      path: path
+    }
+    callback = null
+    visualize = () =>
+      result = @executedCommands[serializedCommand]
+      return unless result?
+
+      Alloy.java.newInstance("edu.mit.csail.sdg.alloy4viz.VizGUI", false, result.filename, null)
+
+      if calback?
+        callback.dispose()
+
+    if @isExecuteCommandRequired(path, command)
+      callback ?= @onExecuteDone(visualize)
+      @executeCommandIfNecessary(path, world, command)
+    else
+      visualize()
+
   getCommands: (world) ->
     world.getAllCommandsSync().toArraySync()
 

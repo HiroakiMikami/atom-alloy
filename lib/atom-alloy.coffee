@@ -131,5 +131,26 @@ module.exports = AtomAlloy =
     @compile()
 
   visualize: ->
+    callback = @alloy.onCompileDone((result) =>
+      world = result.result
+
+      # select a command
+      @selectCommand(world, (command) => @alloy.visualizeCommand(result.path, world, command))
+
+      # Remove this callback
+      callback.dispose()
+    )
+    @compile()
 
   visualizeAll: ->
+    callback = @alloy.onCompileDone((result) =>
+      world = result.result
+
+      # select a command
+      for command in @alloy.getCommands(world)
+        @alloy.visualizeCommand(result.path, world, command)
+
+      # Remove this callback
+      callback.dispose()
+    )
+    @compile()
