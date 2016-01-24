@@ -19,9 +19,17 @@ module.exports = AtomAlloy =
       title: 'SAT solver used in Alloy'
       type: 'string'
       default: 'SAT4J'
+    tmpDirectory:
+      title: 'A temporary directory used by this package'
+      type: 'string'
+      default: '/tmp/atom-alloy'
 
   activate: (state) ->
-    @alloy = new Alloy(atom.config.get("atom-alloy.alloyJar"), atom.config.get("atom-alloy.solver"))
+    @alloy = new Alloy(
+      atom.config.get("atom-alloy.alloyJar"),
+      atom.config.get("atom-alloy.solver"),
+      atom.config.get("atom-alloy.tmpDirectory")
+    )
 
     @atomAlloyView = new AtomAlloyView(status.atomAlloyViewState)
 
@@ -95,7 +103,7 @@ module.exports = AtomAlloy =
       world = result.result
 
       # Select a command
-      @selectCommand(world, (command) => @alloy.executeCommands(world, [command]))
+      @selectCommand(world, (command) => @alloy.executeCommands(result.path, world, [command]))
 
       # Remove this callback
       callback.dispose()
@@ -113,7 +121,7 @@ module.exports = AtomAlloy =
       # Obtain list of commands
       commands = @alloy.getCommands(world)
 
-      @alloy.executeCommands(world, commands)
+      @alloy.executeCommands(result.path, world, commands)
 
       # Remove this callback
       callback.dispose()

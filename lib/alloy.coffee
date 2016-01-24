@@ -1,4 +1,5 @@
 {Emitter} = require 'atom'
+fs = require 'fs'
 
 module.exports =
 class Alloy
@@ -8,8 +9,9 @@ class Alloy
   @a4Options: null
   emitter: null
   solver: null
+  executedCommands: null
 
-  constructor: (@alloyJarPath, solver) ->
+  constructor: (@alloyJarPath, solver, @tmpDirectory) ->
     # Launch JVM and add the classpath of alloy if it is not launched
     if not Alloy.java?
       # Initialize node-java
@@ -24,6 +26,7 @@ class Alloy
       Alloy.a4Options ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.translator.A4Options")
 
     @emitter = new Emitter()
+    @executedCommands = {}
 
     switch solver
       when "BerkMin"
@@ -39,8 +42,13 @@ class Alloy
       when "ZChaff"
         @solver = Alloy.a4Options.SatSolver.ZChaffJNI
 
+    if not fs.statSync(@tmpDirectory)?
+      fs.mkdir(@tmpDirectory)
+
   destroy: () ->
     @emitter.dispose()
+    @executedCommands = {}
+    fs.unlink(@tmpDirectory)
 
   compile: (path) ->
     @emitter.emit("CompileStarted", path)
@@ -58,7 +66,7 @@ class Alloy
         })
     )
 
-  executeCommands: (world, commands) ->
+  executeCommands: (path, world, commands) ->
     allCommands = @getCommands(world)
 
     # make option
@@ -76,6 +84,22 @@ class Alloy
               err: err
             })
           else
+            # Store command, xml, and last updated time
+            lastModifiedTime = fs.statSync(path).mtime
+            command = {
+              label: command.label
+              path: path
+            }
+            filename = "#{@tmpDirectory}/#{command.label}-#{new Date().getTime()}.xml"
+
+            # Save a solution to a xml file
+            result.writeXML(filename)
+
+            @executedCommands[command] = {
+              time: lastModifiedTime,
+              filename: filename
+            }
+
             @emitter.emit("ExecuteDone", {
               command: command
               result: result
