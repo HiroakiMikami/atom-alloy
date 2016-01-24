@@ -19,9 +19,17 @@ module.exports = AtomAlloy =
       title: 'SAT solver used in Alloy'
       type: 'string'
       default: 'SAT4J'
+    tmpDirectory:
+      title: 'A temporary directory used by this package'
+      type: 'string'
+      default: '/tmp/atom-alloy'
 
   activate: (state) ->
-    @alloy = new Alloy(atom.config.get("atom-alloy.alloyJar"), atom.config.get("atom-alloy.solver"))
+    @alloy = new Alloy(
+      atom.config.get("atom-alloy.alloyJar"),
+      atom.config.get("atom-alloy.solver"),
+      atom.config.get("atom-alloy.tmpDirectory")
+    )
 
     @atomAlloyView = new AtomAlloyView(status.atomAlloyViewState)
 
@@ -42,6 +50,8 @@ module.exports = AtomAlloy =
     @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:compile': => @compile()
     @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:execute': => @execute()
     @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:execute-all': => @executeAll()
+    @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:visualize': => @visualize()
+    @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:visualize-all': => @visualizeAll()
 
   consumeStatusBar: (statusBar) ->
     @atomAlloyView.consumeStatusBar(statusBar)
@@ -66,52 +76,75 @@ module.exports = AtomAlloy =
     editor = atom.workspace.getActiveTextEditor()
     return editor?.getPath()
 
+  selectCommand: (world, confirmed) ->
+    # Obtain list of commands
+    commands = @alloy.getCommands(world)
+
+    paletteCallback = @alloyCommandPaletteView.onConfirmed((result) ->
+      confirmed(result)
+      # Remove this callback
+      paletteCallback.dispose()
+    )
+
+    # Open palette to select a command
+    @alloyCommandPaletteView.open(commands)
+
   compile: ->
     path = @getActivePath()
     return unless path?
 
     @alloy.compile(path)
 
-  execute: ->
+  executeCommandTemplate: (getCommands) ->
     # TODO may be unreadable because event based callbacks are nested.
     callback = @alloy.onCompileDone((result) =>
       # Obtain the world instance
       world = result.result
 
-      # Obtain list of commands
-      commands = @alloy.getCommands(world)
-
-      paletteCallback = @alloyCommandPaletteView.onConfirmed((command) =>
-        @alloy.executeCommands(world, [command])
-
-        # Remove this callback
-        paletteCallback.dispose()
+      # calculate commands that are going to be executed
+      getCommands(world, (commands) =>
+        @alloy.executeCommands(result.path, world, commands)
       )
 
-      # Open palette to select a command
-      @alloyCommandPaletteView.open(commands)
-
       # Remove this callback
       callback.dispose()
     )
 
     # Compile alloy files
     @compile()
+
+  execute: ->
+    @executeCommandTemplate((world, callback)=>
+      # Select a command
+      @selectCommand(world, (command) => callback([command]))
+    )
 
   executeAll: ->
-    # TODO may be unreadable because event based callbacks are nested.
+    @executeCommandTemplate((world, callback) =>
+      callback(@alloy.getCommands(world))
+    )
+
+  visualizeCommandTemplate: (getCommands) ->
     callback = @alloy.onCompileDone((result) =>
-      # Obtain the world instance
       world = result.result
 
-      # Obtain list of commands
-      commands = @alloy.getCommands(world)
-
-      @alloy.executeCommands(world, commands)
-
+      getCommands(world, (commands) =>
+        for command in commands
+          @alloy.visualizeCommand(result.path, world, command)
+      )
       # Remove this callback
       callback.dispose()
     )
-
-    # Compile alloy files
     @compile()
+
+
+  visualize: ->
+    @visualizeCommandTemplate((world, callback) =>
+      # Select a command
+      @selectCommand(world, (command) => callback([command]))
+    )
+
+  visualizeAll: ->
+    @visualizeCommandTemplate((world, callback) =>
+      callback(@alloy.getCommands(world))
+    )

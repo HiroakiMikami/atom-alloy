@@ -1,4 +1,5 @@
 {Emitter} = require 'atom'
+fs = require 'fs'
 
 module.exports =
 class Alloy
@@ -8,8 +9,9 @@ class Alloy
   @a4Options: null
   emitter: null
   solver: null
+  executedCommands: null
 
-  constructor: (@alloyJarPath, solver) ->
+  constructor: (@alloyJarPath, solver, @tmpDirectory) ->
     # Launch JVM and add the classpath of alloy if it is not launched
     if not Alloy.java?
       # Initialize node-java
@@ -24,6 +26,7 @@ class Alloy
       Alloy.a4Options ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.translator.A4Options")
 
     @emitter = new Emitter()
+    @executedCommands = {}
 
     switch solver
       when "BerkMin"
@@ -39,8 +42,17 @@ class Alloy
       when "ZChaff"
         @solver = Alloy.a4Options.SatSolver.ZChaffJNI
 
+    # make options
+    @options = Alloy.java.newInstanceSync("edu.mit.csail.sdg.alloy4compiler.translator.A4Options")
+    @options.solver = @solver
+
+    if not fs.statSync(@tmpDirectory)?
+      fs.mkdir(@tmpDirectory)
+
   destroy: () ->
     @emitter.dispose()
+    @executedCommands = {}
+    fs.unlink(@tmpDirectory)
 
   compile: (path) ->
     @emitter.emit("CompileStarted", path)
@@ -58,30 +70,98 @@ class Alloy
         })
     )
 
-  executeCommands: (world, commands) ->
-    allCommands = @getCommands(world)
+  isExecuteCommandRequired: (path, command) ->
+    lastModifiedTime = fs.statSync(path).mtime.getTime()
+    serializedCommand = {
+      label: command.label
+      path: path
+    }
 
-    # make option
-    options = Alloy.java.newInstanceSync("edu.mit.csail.sdg.alloy4compiler.translator.A4Options")
-    options.solver = @solver
+    result = @executedCommands[serializedCommand]
 
+    not (result? && (lastModifiedTime >= result.time))
+
+  executeCommandIfNecessary: (path, world, command) ->
+    # This command is already executed.
+    return if not @isExecuteCommandRequired(path, command)
+
+    serializedCommand = {
+      label: command.label
+      path: path
+    }
+    result = @executedCommands[serializedCommand]
+    if result? then fs.unlink(result.filename)
+
+    delete @executeCommands[serializedCommand]
+
+    @emitter.emit("ExecuteStarted", command)
+    Alloy.translateAlloyToKodkod.execute_command(
+      null, world.getAllReachableSigsSync(), command, @options,
+      (err, result) =>
+        if err?
+          @emitter.emit("ExecuteError", {
+            command: command
+            err: err
+          })
+        else
+          if result.satisfiableSync()
+            # Store command, xml, and last updated time
+            lastModifiedTime = fs.statSync(path).mtime.getTime()
+            serializedCommand = {
+              label: command.label
+              path: path
+            }
+            filename = "#{@tmpDirectory}/#{command.label}-#{new Date().getTime()}.xml"
+
+            # Save a solution to a xml file
+            result.writeXML(filename)
+            @executedCommands[serializedCommand] = {
+              time: lastModifiedTime,
+              filename: filename,
+              solution: result
+            }
+
+          @emitter.emit("ExecuteDone", {
+            command: command
+            result: result
+          })
+    )
+
+  executeCommands: (path, world, commands) ->
     for command in commands
-      @emitter.emit("ExecuteStarted", command)
-      Alloy.translateAlloyToKodkod.execute_command(
-        null, world.getAllReachableSigsSync(), command, options,
-        (err, result) =>
-          if err?
-            @emitter.emit("ExecuteError", {
-              command: command
-              err: err
-            })
-          else
-            @emitter.emit("ExecuteDone", {
-              command: command
-              result: result
-            })
+      @executeCommandIfNecessary(path, world, command)
 
-      )
+  visualizeCommand: (path, world, command) =>
+    serializedCommand = {
+      label: command.label
+      path: path
+    }
+    callback = null
+    visualize = () =>
+      result = @executedCommands[serializedCommand]
+      return unless result?
+
+      evaluator = Alloy.java.newProxy("edu.mit.csail.sdg.alloy4.Computer", {
+        compute: (input) =>
+          if typeof(input) is "string"
+            e = Alloy.compUtil.parseOneExpression_fromStringSync(world, input);
+            return result.solution.evalSync(e) + ""
+          else
+            return input + ""
+        })
+
+      Alloy.java.newInstance(
+        "edu.mit.csail.sdg.alloy4viz.VizGUI",
+        false, result.filename, null, null, evaluator)
+
+      if calback?
+        callback.dispose()
+
+    if @isExecuteCommandRequired(path, command)
+      callback ?= @onExecuteDone(visualize)
+      @executeCommandIfNecessary(path, world, command)
+    else
+      visualize()
 
   getCommands: (world) ->
     world.getAllCommandsSync().toArraySync()
