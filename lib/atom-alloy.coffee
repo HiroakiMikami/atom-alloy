@@ -73,6 +73,7 @@ module.exports = AtomAlloy =
     @alloy.compile(path)
 
   execute: ->
+    # TODO may be unreadable because event based callbacks are nested.
     callback = @alloy.onCompileDone((result) =>
       # Obtain the world instance
       world = result.result
@@ -98,6 +99,7 @@ module.exports = AtomAlloy =
     @compile()
 
   executeAll: ->
+    # TODO may be unreadable because event based callbacks are nested.
     callback = @alloy.onCompileDone((result) =>
       # Obtain the world instance
       world = result.result
