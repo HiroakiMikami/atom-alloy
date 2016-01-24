@@ -68,6 +68,20 @@ module.exports = AtomAlloy =
     editor = atom.workspace.getActiveTextEditor()
     return editor?.getPath()
 
+  selectCommand: (world, confirmed) ->
+    # Obtain list of commands
+    commands = @alloy.getCommands(world)
+
+    paletteCallback1 = @alloyCommandPaletteView.onConfirmed(confirmed)
+    paletteCallback2 = @alloyCommandPaletteView.onConfirmed(->
+      # Remove the callbacks
+      paletteCallback1.dispose()
+      paletteCallback2.dispose()
+    )
+
+    # Open palette to select a command
+    @alloyCommandPaletteView.open(commands)
+
   compile: ->
     path = @getActivePath()
     return unless path?
@@ -80,18 +94,8 @@ module.exports = AtomAlloy =
       # Obtain the world instance
       world = result.result
 
-      # Obtain list of commands
-      commands = @alloy.getCommands(world)
-
-      paletteCallback = @alloyCommandPaletteView.onConfirmed((command) =>
-        @alloy.executeCommands(world, [command])
-
-        # Remove this callback
-        paletteCallback.dispose()
-      )
-
-      # Open palette to select a command
-      @alloyCommandPaletteView.open(commands)
+      # Select a command
+      @selectCommand(world, (command) => @alloy.executeCommands(world, [command]))
 
       # Remove this callback
       callback.dispose()
