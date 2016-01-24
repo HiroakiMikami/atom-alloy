@@ -104,21 +104,22 @@ class Alloy
             err: err
           })
         else
-          # Store command, xml, and last updated time
-          lastModifiedTime = fs.statSync(path).mtime.getTime()
-          serializedCommand = {
-            label: command.label
-            path: path
-          }
-          filename = "#{@tmpDirectory}/#{command.label}-#{new Date().getTime()}.xml"
+          if result.satisfiableSync()
+            # Store command, xml, and last updated time
+            lastModifiedTime = fs.statSync(path).mtime.getTime()
+            serializedCommand = {
+              label: command.label
+              path: path
+            }
+            filename = "#{@tmpDirectory}/#{command.label}-#{new Date().getTime()}.xml"
 
-          # Save a solution to a xml file
-          result.writeXML(filename)
-          @executedCommands[serializedCommand] = {
-            time: lastModifiedTime,
-            filename: filename,
-            solution: result
-          }
+            # Save a solution to a xml file
+            result.writeXML(filename)
+            @executedCommands[serializedCommand] = {
+              time: lastModifiedTime,
+              filename: filename,
+              solution: result
+            }
 
           @emitter.emit("ExecuteDone", {
             command: command
