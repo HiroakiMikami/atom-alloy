@@ -80,11 +80,10 @@ module.exports = AtomAlloy =
     # Obtain list of commands
     commands = @alloy.getCommands(world)
 
-    paletteCallback1 = @alloyCommandPaletteView.onConfirmed(confirmed)
-    paletteCallback2 = @alloyCommandPaletteView.onConfirmed(->
-      # Remove the callbacks
-      paletteCallback1.dispose()
-      paletteCallback2.dispose()
+    paletteCallback = @alloyCommandPaletteView.onConfirmed((result) ->
+      confirmed(result)
+      # Remove this callback
+      paletteCallback.dispose()
     )
 
     # Open palette to select a command
@@ -96,14 +95,16 @@ module.exports = AtomAlloy =
 
     @alloy.compile(path)
 
-  execute: ->
+  executeCommandTemplate: (getCommands) ->
     # TODO may be unreadable because event based callbacks are nested.
     callback = @alloy.onCompileDone((result) =>
       # Obtain the world instance
       world = result.result
 
-      # Select a command
-      @selectCommand(world, (command) => @alloy.executeCommands(result.path, world, [command]))
+      # calculate commands that are going to be executed
+      getCommands(world, (commands) =>
+        @alloy.executeCommands(result.path, world, commands)
+      )
 
       # Remove this callback
       callback.dispose()
@@ -111,46 +112,39 @@ module.exports = AtomAlloy =
 
     # Compile alloy files
     @compile()
+
+  execute: ->
+    @executeCommandTemplate((world, callback)=>
+      # Select a command
+      @selectCommand(world, (command) => callback([command]))
+    )
 
   executeAll: ->
-    # TODO may be unreadable because event based callbacks are nested.
+    @executeCommandTemplate((world, callback) =>
+      callback(@alloy.getCommands(world))
+    )
+
+  visualizeCommandTemplate: (getCommands) ->
     callback = @alloy.onCompileDone((result) =>
-      # Obtain the world instance
       world = result.result
 
-      # Obtain list of commands
-      commands = @alloy.getCommands(world)
-
-      @alloy.executeCommands(result.path, world, commands)
-
+      getCommands(world, (commands) =>
+        for command in commands
+          @alloy.visualizeCommand(result.path, world, command)
+      )
       # Remove this callback
       callback.dispose()
     )
-
-    # Compile alloy files
     @compile()
+
 
   visualize: ->
-    callback = @alloy.onCompileDone((result) =>
-      world = result.result
-
-      # select a command
-      @selectCommand(world, (command) => @alloy.visualizeCommand(result.path, world, command))
-
-      # Remove this callback
-      callback.dispose()
+    @visualizeCommandTemplate((world, callback) =>
+      # Select a command
+      @selectCommand(world, (command) => callback([command]))
     )
-    @compile()
 
   visualizeAll: ->
-    callback = @alloy.onCompileDone((result) =>
-      world = result.result
-
-      # select a command
-      for command in @alloy.getCommands(world)
-        @alloy.visualizeCommand(result.path, world, command)
-
-      # Remove this callback
-      callback.dispose()
+    @visualizeCommandTemplate((world, callback) =>
+      callback(@alloy.getCommands(world))
     )
-    @compile()
