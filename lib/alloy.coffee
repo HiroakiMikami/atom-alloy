@@ -42,6 +42,10 @@ class Alloy
       when "ZChaff"
         @solver = Alloy.a4Options.SatSolver.ZChaffJNI
 
+    # make options
+    @options = Alloy.java.newInstanceSync("edu.mit.csail.sdg.alloy4compiler.translator.A4Options")
+    @options.solver = @solver
+
     if not fs.statSync(@tmpDirectory)?
       fs.mkdir(@tmpDirectory)
 
@@ -66,46 +70,64 @@ class Alloy
         })
     )
 
+  isExecuteCommandRequired: (path, command) ->
+    lastModifiedTime = fs.statSync(path).mtime.getTime()
+    serializedCommand = {
+      label: command.label
+      path: path
+    }
+
+    result = @executedCommands[serializedCommand]
+
+    not (result? && (lastModifiedTime >= result.time))
+
+  executeCommandIfNecessary: (path, world, command) ->
+    # This command is already executed.
+    return if not @isExecuteCommandRequired(path, command)
+
+    serializedCommand = {
+      label: command.label
+      path: path
+    }
+    result = @executedCommands[serializedCommand]
+    if result? then fs.unlink(result.filename)
+
+    delete @executeCommands[serializedCommand]
+
+    @emitter.emit("ExecuteStarted", command)
+    Alloy.translateAlloyToKodkod.execute_command(
+      null, world.getAllReachableSigsSync(), command, @options,
+      (err, result) =>
+        if err?
+          @emitter.emit("ExecuteError", {
+            command: command
+            err: err
+          })
+        else
+          # Store command, xml, and last updated time
+          lastModifiedTime = fs.statSync(path).mtime.getTime()
+          serializedCommand = {
+            label: command.label
+            path: path
+          }
+          filename = "#{@tmpDirectory}/#{command.label}-#{new Date().getTime()}.xml"
+
+          # Save a solution to a xml file
+          result.writeXML(filename)
+          @executedCommands[serializedCommand] = {
+            time: lastModifiedTime,
+            filename: filename
+          }
+
+          @emitter.emit("ExecuteDone", {
+            command: command
+            result: result
+          })
+    )
+
   executeCommands: (path, world, commands) ->
-    allCommands = @getCommands(world)
-
-    # make option
-    options = Alloy.java.newInstanceSync("edu.mit.csail.sdg.alloy4compiler.translator.A4Options")
-    options.solver = @solver
-
     for command in commands
-      @emitter.emit("ExecuteStarted", command)
-      Alloy.translateAlloyToKodkod.execute_command(
-        null, world.getAllReachableSigsSync(), command, options,
-        (err, result) =>
-          if err?
-            @emitter.emit("ExecuteError", {
-              command: command
-              err: err
-            })
-          else
-            # Store command, xml, and last updated time
-            lastModifiedTime = fs.statSync(path).mtime
-            command = {
-              label: command.label
-              path: path
-            }
-            filename = "#{@tmpDirectory}/#{command.label}-#{new Date().getTime()}.xml"
-
-            # Save a solution to a xml file
-            result.writeXML(filename)
-
-            @executedCommands[command] = {
-              time: lastModifiedTime,
-              filename: filename
-            }
-
-            @emitter.emit("ExecuteDone", {
-              command: command
-              result: result
-            })
-
-      )
+      @executeCommandIfNecessary(path, world, command)
 
   getCommands: (world) ->
     world.getAllCommandsSync().toArraySync()
