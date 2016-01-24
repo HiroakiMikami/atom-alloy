@@ -5,7 +5,6 @@ class Alloy
   @java: null
   @compUtil: null
   @emitter: null
-  @worlds: null
 
   constructor: (@alloyJarPath) ->
     # Launch JVM and add the classpath of alloy if it is not launched
@@ -20,11 +19,9 @@ class Alloy
       Alloy.compUtil ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.parser.CompUtil")
 
     @emitter = new Emitter()
-    @worlds = {}
 
   destroy: () ->
     @emitter.dispose()
-    @worlds = {}
 
   compile: (path) ->
     @emitter.emit("CompileStarted", path)
@@ -36,7 +33,6 @@ class Alloy
           err: err
         })
       else
-        @worlds[path] = result # store world to use in future tasks
         @emitter.emit("CompileDone", {
           path: path
           result: result
