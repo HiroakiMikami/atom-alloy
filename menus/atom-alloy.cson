@@ -22,6 +22,14 @@
           'label': "Execute All Commands"
           'command': 'atom-alloy:execute-all'
         }
+        {
+          'label': "Visualize"
+          'command': 'atom-alloy:visualize'
+        },
+        {
+          'label': "Visualize All Commands"
+          'command': 'atom-alloy:visualize-all'
+        }
       ]
     ]
   }

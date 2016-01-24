@@ -11,3 +11,5 @@
   'ctrl-b': 'atom-alloy:compile'
   'ctrl-e': 'atom-alloy:execute'
   'ctrl-E': 'atom-alloy:execute-all'
+  'ctrl-r': 'atom-alloy:visualize'
+  'ctrl-R': 'atom-alloy:visualize-all'

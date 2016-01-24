@@ -42,6 +42,8 @@ module.exports = AtomAlloy =
     @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:compile': => @compile()
     @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:execute': => @execute()
     @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:execute-all': => @executeAll()
+    @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:visualize': => @visualize()
+    @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:visualize-all': => @visualizeAll()
 
   consumeStatusBar: (statusBar) ->
     @atomAlloyView.consumeStatusBar(statusBar)
@@ -115,3 +117,7 @@ module.exports = AtomAlloy =
 
     # Compile alloy files
     @compile()
+
+  visualize: ->
+
+  visualizeAll: ->
