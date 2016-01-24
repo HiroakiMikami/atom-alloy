@@ -160,7 +160,7 @@ class Alloy
         "edu.mit.csail.sdg.alloy4viz.VizGUI",
         false, result.filename, null, null, evaluator)
 
-      if calback?
+      if callback?
         callback.dispose()
 
     if @isExecuteCommandRequired(path, command)
