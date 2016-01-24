@@ -1,5 +1,5 @@
-{Emitter} = require 'atom'
-fs = require 'fs'
+Emitter = null
+fs = null
 
 module.exports =
 class Alloy
@@ -11,7 +11,7 @@ class Alloy
   solver: null
   executedCommands: null
 
-  constructor: (@alloyJarPath, solver, @tmpDirectory) ->
+  initializeIfNecessary: ->
     # Launch JVM and add the classpath of alloy if it is not launched
     if not Alloy.java?
       # Initialize node-java
@@ -25,26 +25,30 @@ class Alloy
       Alloy.translateAlloyToKodkod ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod")
       Alloy.a4Options ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.translator.A4Options")
 
-    @emitter = new Emitter()
-    @executedCommands = {}
-
-    switch solver
+    switch @solver
       when "BerkMin"
-        @solver = Alloy.a4Options.SatSolver.BerkMinPIPE
+        solver = Alloy.a4Options.SatSolver.BerkMinPIPE
       when "MiniSat"
-        @solver = Alloy.a4Options.SatSolver.MiniSatJNI
+        solver = Alloy.a4Options.SatSolver.MiniSatJNI
       when "MiniSatProver"
-        @solver = Alloy.a4Options.SatSolver.MiniSatProverJNI
+        solver = Alloy.a4Options.SatSolver.MiniSatProverJNI
       when "SAT4J"
-        @solver = Alloy.a4Options.SatSolver.SAT4J
+        solver = Alloy.a4Options.SatSolver.SAT4J
       when "Spear"
-        @solver = Alloy.a4Options.SatSolver.Spear
+        solver = Alloy.a4Options.SatSolver.Spear
       when "ZChaff"
-        @solver = Alloy.a4Options.SatSolver.ZChaffJNI
+        solver = Alloy.a4Options.SatSolver.ZChaffJNI
 
     # make options
     @options = Alloy.java.newInstanceSync("edu.mit.csail.sdg.alloy4compiler.translator.A4Options")
-    @options.solver = @solver
+    @options.solver = solver
+
+  constructor: (@alloyJarPath, @solver, @tmpDirectory) ->
+    Emitter ?= require('atom').Emitter
+    fs ?= require 'fs'
+
+    @emitter = new Emitter()
+    @executedCommands = {}
 
     if not fs.statSync(@tmpDirectory)?
       fs.mkdir(@tmpDirectory)
@@ -55,6 +59,8 @@ class Alloy
     fs.unlink(@tmpDirectory)
 
   compile: (path) ->
+    @initializeIfNecessary()
+
     @emitter.emit("CompileStarted", path)
     # TODO should use A4Reporter, but node-java cannot generate a subclass of class (not interface)
     Alloy.compUtil.parseEverything_fromFile(null, null, path, (err, result) =>

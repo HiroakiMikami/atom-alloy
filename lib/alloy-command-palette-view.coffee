@@ -1,5 +1,5 @@
-{$, $$, SelectListView} = require 'atom-space-pen-views'
-{Emitter} = require 'atom'
+SelectListView = require('atom-space-pen-views').SelectListView
+Emitter = null
 
 module.exports =
 class AlloyCommandPaletteView extends SelectListView
@@ -7,6 +7,8 @@ class AlloyCommandPaletteView extends SelectListView
   emitter: null
   constructor: () ->
     super()
+    Emitter ?= require('atom').Emitter
+
     @emitter = new Emitter()
 
   open: (items) ->

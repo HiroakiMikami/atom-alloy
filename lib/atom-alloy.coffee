@@ -1,7 +1,7 @@
-Alloy = require './alloy'
-AlloyCommandPaletteView = require './alloy-command-palette-view'
-AtomAlloyView = require './atom-alloy-view'
-{CompositeDisposable} = require 'atom'
+Alloy = null
+AlloyCommandPaletteView = null
+AtomAlloyView = null
+CompositeDisposable = null
 
 module.exports = AtomAlloy =
   atomAlloyView: null
@@ -25,6 +25,11 @@ module.exports = AtomAlloy =
       default: '/tmp/atom-alloy'
 
   activate: (state) ->
+    Alloy ?= require './alloy'
+    AlloyCommandPaletteView ?= require './alloy-command-palette-view'
+    AtomAlloyView ?= require './atom-alloy-view'
+    CompositeDisposable ?= require('atom').CompositeDisposable
+
     @alloy = new Alloy(
       atom.config.get("atom-alloy.alloyJar"),
       atom.config.get("atom-alloy.solver"),
