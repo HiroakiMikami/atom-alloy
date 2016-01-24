@@ -4,9 +4,12 @@ module.exports =
 class Alloy
   @java: null
   @compUtil: null
-  @emitter: null
+  @translateAlloyToKodkod: null
+  @a4Options: null
+  emitter: null
+  solver: null
 
-  constructor: (@alloyJarPath) ->
+  constructor: (@alloyJarPath, solver) ->
     # Launch JVM and add the classpath of alloy if it is not launched
     if not Alloy.java?
       # Initialize node-java
@@ -17,8 +20,24 @@ class Alloy
 
       # import the required class
       Alloy.compUtil ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.parser.CompUtil")
+      Alloy.translateAlloyToKodkod ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod")
+      Alloy.a4Options ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.translator.A4Options")
 
     @emitter = new Emitter()
+
+    switch solver
+      when "BerkMin"
+        @solver = Alloy.a4Options.SatSolver.BerkMinPIPE
+      when "MiniSat"
+        @solver = Alloy.a4Options.SatSolver.MiniSatJNI
+      when "MiniSatProver"
+        @solver = Alloy.a4Options.SatSolver.MiniSatProverJNI
+      when "SAT4J"
+        @solver = Alloy.a4Options.SatSolver.SAT4J
+      when "Spear"
+        @solver = Alloy.a4Options.SatSolver.Spear
+      when "ZChaff"
+        @solver = Alloy.a4Options.SatSolver.ZChaffJNI
 
   destroy: () ->
     @emitter.dispose()
@@ -39,9 +58,38 @@ class Alloy
         })
     )
 
+  executeCommands: (world, commands) ->
+    allCommands = @getCommands(world)
+
+    # make option
+    options = Alloy.java.newInstanceSync("edu.mit.csail.sdg.alloy4compiler.translator.A4Options")
+    options.solver = @solver
+
+    for command in commands
+      @emitter.emit("ExecuteStarted", command)
+      Alloy.translateAlloyToKodkod.execute_command(
+        null, world.getAllReachableSigsSync(), command, options,
+        (err, result) =>
+          if err?
+            @emitter.emit("ExecuteError", {
+              command: command
+              err: err
+            })
+          else
+            @emitter.emit("ExecuteDone", {
+              command: command
+              result: result
+            })
+
+      )
+
   getCommands: (world) ->
     world.getAllCommandsSync().toArraySync()
 
   onCompileStarted: (callback) -> @emitter.on("CompileStarted", callback)
   onCompileError: (callback) -> @emitter.on("CompileError", callback)
   onCompileDone: (callback) -> @emitter.on("CompileDone", callback)
+
+  onExecuteStarted: (callback) -> @emitter.on("ExecuteStarted", callback)
+  onExecuteError: (callback) -> @emitter.on("ExecuteError", callback)
+  onExecuteDone: (callback) -> @emitter.on("ExecuteDone", callback)

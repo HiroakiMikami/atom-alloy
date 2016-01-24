@@ -14,9 +14,14 @@ module.exports = AtomAlloy =
       title: 'Jar File of Alloy'
       type: 'string'
       default: '/usr/share/alloy/alloy4.2.jar'
+    solver:
+      # TODO should show all the candidates
+      title: 'SAT solver used in Alloy'
+      type: 'string'
+      default: 'SAT4J'
 
   activate: (state) ->
-    @alloy = new Alloy(atom.config.get("atom-alloy.alloyJar"))
+    @alloy = new Alloy(atom.config.get("atom-alloy.alloyJar"), atom.config.get("atom-alloy.solver"))
 
     @atomAlloyView = new AtomAlloyView(status.atomAlloyViewState)
 
@@ -26,6 +31,9 @@ module.exports = AtomAlloy =
     @alloy.onCompileStarted(@atomAlloyView.compileStarted)
     @alloy.onCompileDone(@atomAlloyView.compileDone)
     @alloy.onCompileError(@atomAlloyView.compileError)
+    @alloy.onExecuteStarted(@atomAlloyView.executeStarted)
+    @alloy.onExecuteDone(@atomAlloyView.executeDone)
+    @alloy.onExecuteError(@atomAlloyView.executeError)
 
     # Events subscribed to in atom's system can be easily cleaned up with a CompositeDisposable
     @subscriptions = new CompositeDisposable
@@ -72,6 +80,13 @@ module.exports = AtomAlloy =
       # Obtain list of commands
       commands = @alloy.getCommands(world)
 
+      paletteCallback = @alloyCommandPaletteView.onConfirmed((command) =>
+        @alloy.executeCommands(world, [command])
+
+        # Remove this callback
+        paletteCallback.dispose()
+      )
+
       # Open palette to select a command
       @alloyCommandPaletteView.open(commands)
 
@@ -89,6 +104,8 @@ module.exports = AtomAlloy =
 
       # Obtain list of commands
       commands = @alloy.getCommands(world)
+
+      @alloy.executeCommands(world, commands)
 
       # Remove this callback
       callback.dispose()
