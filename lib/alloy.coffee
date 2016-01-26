@@ -10,6 +10,7 @@ class Alloy
   emitter: null
   solver: null
   executedCommands: null
+  commandQueue: null
 
   initializeIfNecessary: ->
     # Launch JVM and add the classpath of alloy if it is not launched
@@ -49,39 +50,57 @@ class Alloy
 
     @emitter = new Emitter()
     @executedCommands = {}
+    @commandQueue = []
 
-    if not fs.statSync(@tmpDirectory)?
+    @onCompileError(@executeNextCommandFromQueue)
+    @onCompileDone(@executeNextCommandFromQueue)
+
+    @onExecuteDone(@executeNextCommandFromQueue)
+    @onExecuteError(@executeNextCommandFromQueue)
+
+    try
+      fs.statSync(@tmpDirectory)
+    catch error
       fs.mkdir(@tmpDirectory)
 
   destroy: () ->
     @emitter.dispose()
     @executedCommands = {}
     fs.unlink(@tmpDirectory)
+    @commandQueue = null
+
+  executeFromQueue: => @commandQueue[0]?()
+  executeNextCommandFromQueue: =>
+    @commandQueue.shift()
+    if @commandQueue.length > 0 then @executeFromQueue()
 
   compile: (path) ->
     @initializeIfNecessary()
 
-    @emitter.emit("CompileStarted", path)
-    # TODO should use A4Reporter, but node-java cannot generate a subclass of class (not interface)
-    Alloy.compUtil.parseEverything_fromFile(null, null, path, (err, result) =>
-      if err?
-        @emitter.emit("CompileError", {
-          path: path
-          err: err
-        })
-      else
-        @emitter.emit("CompileDone", {
-          path: path
-          result: result
-        })
+    # Add a command to the queue
+    @commandQueue.push( =>
+      @emitter.emit("CompileStarted", path)
+      # TODO should use A4Reporter, but node-java cannot generate a subclass of class (not interface)
+      Alloy.compUtil.parseEverything_fromFile(null, null, path, (err, result) =>
+        if err?
+          @emitter.emit("CompileError", {
+            path: path
+            err: err
+          })
+        else
+          @emitter.emit("CompileDone", {
+            path: path
+            result: result
+          })
+      )
     )
+    if @commandQueue.length == 1
+      # Execute a command if there are no commands that are executing now
+      @executeFromQueue()
 
   isExecuteCommandRequired: (path, command) ->
     lastModifiedTime = fs.statSync(path).mtime.getTime()
-    serializedCommand = {
-      label: command.label
-      path: path
-    }
+    serializedCommand = "#{path}/#{command.label}"
 
     result = @executedCommands[serializedCommand]
 
@@ -91,83 +110,82 @@ class Alloy
     # This command is already executed.
     return if not @isExecuteCommandRequired(path, command)
 
-    serializedCommand = {
-      label: command.label
-      path: path
-    }
+    serializedCommand = "#{path}/#{command.label}"
     result = @executedCommands[serializedCommand]
     if result? then fs.unlink(result.filename)
 
     delete @executeCommands[serializedCommand]
 
-    @emitter.emit("ExecuteStarted", command)
-    Alloy.translateAlloyToKodkod.execute_command(
-      null, world.getAllReachableSigsSync(), command, @options,
-      (err, result) =>
-        if err?
-          @emitter.emit("ExecuteError", {
-            command: command
-            err: err
-          })
-        else
-          if result.satisfiableSync()
-            # Store command, xml, and last updated time
-            lastModifiedTime = fs.statSync(path).mtime.getTime()
-            serializedCommand = {
-              label: command.label
-              path: path
-            }
-            filename = "#{@tmpDirectory}/#{command.label}-#{new Date().getTime()}.xml"
+    @commandQueue.push( =>
+      @emitter.emit("ExecuteStarted", command)
+      Alloy.translateAlloyToKodkod.execute_command(
+        null, world.getAllReachableSigsSync(), command, @options,
+        (err, result) =>
+          if err?
+            @emitter.emit("ExecuteError", {
+              command: command
+              err: err
+              })
+          else
+            if result.satisfiableSync()
+              # Store command, xml, and last updated time
+              lastModifiedTime = fs.statSync(path).mtime.getTime()
 
-            # Save a solution to a xml file
-            result.writeXML(filename)
-            @executedCommands[serializedCommand] = {
-              time: lastModifiedTime,
-              filename: filename,
-              solution: result
-            }
+              filename = "#{@tmpDirectory}/#{command.label}-#{new Date().getTime()}.xml"
+              # Save a solution to a xml file
+              result.writeXML(filename)
+              @executedCommands[serializedCommand] = {
+                time: lastModifiedTime,
+                filename: filename,
+                solution: result
+              }
 
-          @emitter.emit("ExecuteDone", {
-            command: command
-            result: result
-          })
+            @emitter.emit("ExecuteDone", {
+              command: command
+              result: result
+            })
+      )
     )
+
+    if @commandQueue.length == 1
+      # Execute a command if there are no commands that are executing now
+      @executeFromQueue()
 
   executeCommands: (path, world, commands) ->
     for command in commands
       @executeCommandIfNecessary(path, world, command)
 
   visualizeCommand: (path, world, command) =>
-    serializedCommand = {
-      label: command.label
-      path: path
-    }
-    callback = null
-    visualize = () =>
-      result = @executedCommands[serializedCommand]
-      return unless result?
+    serializedCommand = "#{path}/#{command.label}"
 
-      evaluator = Alloy.java.newProxy("edu.mit.csail.sdg.alloy4.Computer", {
-        compute: (input) =>
-          if typeof(input) is "string"
-            e = Alloy.compUtil.parseOneExpression_fromStringSync(world, input);
-            return result.solution.evalSync(e) + ""
-          else
-            return input + ""
+    visualize = () =>
+      try
+        result = @executedCommands[serializedCommand]
+        return unless result?
+
+        evaluator = Alloy.java.newProxy("edu.mit.csail.sdg.alloy4.Computer", {
+          compute: (input) =>
+            if typeof(input) is "string"
+              e = Alloy.compUtil.parseOneExpression_fromStringSync(world, input);
+              return result.solution.evalSync(e) + ""
+            else
+              return input + ""
         })
 
-      Alloy.java.newInstance(
-        "edu.mit.csail.sdg.alloy4viz.VizGUI",
-        false, result.filename, null, null, evaluator)
-
-      if callback?
-        callback.dispose()
+        Alloy.java.newInstance(
+          "edu.mit.csail.sdg.alloy4viz.VizGUI",
+          false, result.filename, null, null, evaluator)
+      finally
+        @executeNextCommandFromQueue()
 
     if @isExecuteCommandRequired(path, command)
-      callback ?= @onExecuteDone(visualize)
       @executeCommandIfNecessary(path, world, command)
-    else
-      visualize()
+
+    @commandQueue.push(visualize)
+
+    if @commandQueue.length == 1
+      # Execute a command if there are no commands that are executing now
+      @executeFromQueue()
 
   getCommands: (world) ->
     world.getAllCommandsSync().toArraySync()
