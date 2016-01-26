@@ -7,10 +7,12 @@ class Alloy
   @compUtil: null
   @translateAlloyToKodkod: null
   @a4Options: null
+  @executerService: null
   emitter: null
   solver: null
   executedCommands: null
   commandQueue: null
+  currentCommand: null
 
   initializeIfNecessary: ->
     # Launch JVM and add the classpath of alloy if it is not launched
@@ -25,6 +27,8 @@ class Alloy
       Alloy.compUtil ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.parser.CompUtil")
       Alloy.translateAlloyToKodkod ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod")
       Alloy.a4Options ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.translator.A4Options")
+
+      Alloy.executerService ?= Alloy.java.callStaticMethodSync("java.util.concurrent.Executors", "newFixedThreadPool", 1)
 
     switch @solver
       when "BerkMin"
@@ -72,23 +76,31 @@ class Alloy
     @initializeIfNecessary()
 
     # Add a command to the queue
-    @commandQueue.push( =>
-      @emitter.emit("CompileStarted", path)
-      # TODO should use A4Reporter, but node-java cannot generate a subclass of class (not interface)
-      Alloy.compUtil.parseEverything_fromFile(null, null, path, (err, result) =>
-        if err?
-          @emitter.emit("CompileError", {
-            path: path
-            err: err
-          })
-        else
-          @emitter.emit("CompileDone", {
-            path: path
-            result: result
-          })
-        @executeNextCommandFromQueue()
-      )
-    )
+    @commandQueue.push(
+      =>
+        @emitter.emit("CompileStarted", path)
+        Alloy.executerService.submit(Alloy.java.newProxy("java.util.concurrent.Callable", {
+          call: =>
+            # TODO should use A4Reporter, but node-java cannot generate a subclass of class (not interface)
+            Alloy.compUtil.parseEverything_fromFile(null, null, path, (err, result) =>
+              try
+                if err?
+                  @emitter.emit("CompileError", {
+                    path: path
+                    err: err
+                  })
+                else
+                  @emitter.emit("CompileDone", {
+                    path: path
+                    result: result
+                  })
+              finally
+                @currentCommand = null
+                @executeNextCommandFromQueue()
+            )
+        }), (err, result) =>
+          if result? then @currentCommand ?= result
+      ))
     if @commandQueue.length == 1
       # Execute a command if there are no commands that are executing now
       @executeFromQueue()
@@ -113,33 +125,40 @@ class Alloy
 
     @commandQueue.push( =>
       @emitter.emit("ExecuteStarted", command)
-      Alloy.translateAlloyToKodkod.execute_command(
-        null, world.getAllReachableSigsSync(), command, @options,
-        (err, result) =>
-          if err?
-            @emitter.emit("ExecuteError", {
-              command: command
-              err: err
-            })
-          else
-            if result.satisfiableSync()
-              # Store command, xml, and last updated time
-              lastModifiedTime = fs.statSync(path).mtime.getTime()
+      Alloy.executerService.submit(Alloy.java.newProxy("java.util.concurrent.Callable", {
+        call: =>
+          Alloy.translateAlloyToKodkod.execute_command(null, world.getAllReachableSigsSync(), command, @options, (err, result) =>
+            try
+              if err?
+                @emitter.emit("ExecuteError", {
+                  command: command
+                  err: err
+                })
+                return
 
-              filename = "#{@tmpDirectory}/#{command.label}-#{new Date().getTime()}.xml"
-              # Save a solution to a xml file
-              result.writeXML(filename)
-              @executedCommands[serializedCommand] = {
-                time: lastModifiedTime,
-                filename: filename,
-                solution: result
-              }
+              if result.satisfiableSync()
+                # Store command, xml, and last updated time
+                lastModifiedTime = fs.statSync(path).mtime.getTime()
 
-            @emitter.emit("ExecuteDone", {
-              command: command
-              result: result
-            })
-          @executeNextCommandFromQueue()
+                filename = "#{@tmpDirectory}/#{command.label}-#{new Date().getTime()}.xml"
+                # Save a solution to a xml file
+                result.writeXML(filename)
+                @executedCommands[serializedCommand] = {
+                  time: lastModifiedTime,
+                  filename: filename,
+                  solution: result
+                }
+
+              @emitter.emit("ExecuteDone", {
+                command: command
+                result: result
+              })
+            finally
+              @currentCommand = null
+              @executeNextCommandFromQueue()
+          )
+      }), (err, result) =>
+          if result? then @currentCommand ?= result
       )
     )
 
