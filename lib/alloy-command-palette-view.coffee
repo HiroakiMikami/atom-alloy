@@ -7,19 +7,27 @@ class AlloyCommandPaletteView extends SelectListView
   emitter: null
   constructor: () ->
     super()
+
+    # Require the module
     Emitter ?= require('atom').Emitter
 
+    # Initialize the field
     @emitter = new Emitter()
 
+  destroy: () ->
+    @panel?.destroy()
+    @emitter.dispose()
+
   open: (items) ->
+    # Initialize the field
     @panel ?= atom.workspace.addModalPanel(item: this, visible: false)
 
+    # Show the view
     @setItems(items)
     @panel.show()
     @focusFilterEditor()
 
-  viewForItem: (item) ->
-    "<li>#{item.label}</li>"
+  viewForItem: (item) -> "<li>#{item.label}</li>"
 
   getEmptyMessage: -> "There are no commands to execute."
 
@@ -27,12 +35,6 @@ class AlloyCommandPaletteView extends SelectListView
     @emitter.emit("OnConfirmed", item)
     @panel.hide()
 
-  onConfirmed: (callback) ->
-    @emitter.on("OnConfirmed", callback)
+  onConfirmed: (callback) -> @emitter.on("OnConfirmed", callback)
 
-  cancelled: ->
-    @panel.hide()
-
-  destroy: () ->
-    @panel?.destroy()
-    @emitter.dispose()
+  cancelled: -> @panel.hide()
