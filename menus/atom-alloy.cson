@@ -29,6 +29,10 @@
         {
           'label': "Visualize All Commands"
           'command': 'atom-alloy:visualize-all'
+        },
+        {
+          'label': "Cancel Current Command"
+          'command': 'atom-alloy:cancel'
         }
       ]
     ]

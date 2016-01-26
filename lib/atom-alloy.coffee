@@ -48,6 +48,8 @@ module.exports = AtomAlloy =
     @alloy.onExecuteDone(@atomAlloyView.executeDone)
     @alloy.onExecuteError(@atomAlloyView.executeError)
 
+    @atomAlloyView.onCanceled(() => @alloy.canceled())
+
     # Events subscribed to in atom's system can be easily cleaned up with a CompositeDisposable
     @subscriptions = new CompositeDisposable
 
@@ -57,6 +59,7 @@ module.exports = AtomAlloy =
     @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:execute-all': => @executeAll()
     @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:visualize': => @visualize()
     @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:visualize-all': => @visualizeAll()
+    @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:cancel': => @cancel()
 
   consumeStatusBar: (statusBar) ->
     @atomAlloyView.consumeStatusBar(statusBar)
@@ -153,3 +156,5 @@ module.exports = AtomAlloy =
     @visualizeCommandTemplate((world, callback) =>
       callback(@alloy.getCommands(world))
     )
+
+  cancel: -> @alloy.canceled()

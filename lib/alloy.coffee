@@ -205,6 +205,11 @@ class Alloy
   getCommands: (world) ->
     world.getAllCommandsSync().toArraySync()
 
+  canceled: () =>
+    return unless @currentCommand?
+    @currentCommand.cancelSync(true)
+    @executeNextCommandFromQueue()
+
   onCompileStarted: (callback) -> @emitter.on("CompileStarted", callback)
   onCompileError: (callback) -> @emitter.on("CompileError", callback)
   onCompileDone: (callback) -> @emitter.on("CompileDone", callback)

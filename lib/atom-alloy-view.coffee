@@ -21,7 +21,10 @@ class AtomAlloyView
 
     @emitter = new Emitter
 
-    handler = () => @emitter.emit("Canceled")
+    handler = () =>
+      @cancelText.style["display"] = "none"
+      @descriptionText.innerText = ""
+      @emitter.emit("Canceled")
 
     @cancelText.addEventListener("click", handler, true)
 
