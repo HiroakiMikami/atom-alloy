@@ -15,8 +15,8 @@ module.exports = AtomAlloy =
       type: 'string'
       default: '/usr/share/alloy/alloy4.2.jar'
     solver:
-      # TODO should show all the candidates
       title: 'SAT solver used in Alloy'
+      description: 'BerkMin, MiniSat, MiniSatProver, SAT4J, Spear, and ZChaff are supported now.'
       type: 'string'
       default: 'SAT4J'
     tmpDirectory:
@@ -25,22 +25,23 @@ module.exports = AtomAlloy =
       default: '/tmp/atom-alloy'
 
   activate: (state) ->
+    # Require the modules
     Alloy ?= require './alloy'
     AlloyCommandPaletteView ?= require './alloy-command-palette-view'
     AtomAlloyView ?= require './atom-alloy-view'
     CompositeDisposable ?= require('atom').CompositeDisposable
 
+    # Initialize the fields
     @alloy = new Alloy(
       atom.config.get("atom-alloy.alloyJar"),
       atom.config.get("atom-alloy.solver"),
       atom.config.get("atom-alloy.tmpDirectory")
     )
-
     @atomAlloyView = new AtomAlloyView(status.atomAlloyViewState)
-
     @alloyCommandPaletteView = new AlloyCommandPaletteView()
+    @subscriptions = new CompositeDisposable
 
-    # Wires between the components
+    # Wire between the components
     @alloy.onCompileStarted(@atomAlloyView.compileStarted)
     @alloy.onCompileDone(@atomAlloyView.compileDone)
     @alloy.onCompileError(@atomAlloyView.compileError)
@@ -48,18 +49,15 @@ module.exports = AtomAlloy =
     @alloy.onExecuteDone(@atomAlloyView.executeDone)
     @alloy.onExecuteError(@atomAlloyView.executeError)
 
-    # Events subscribed to in atom's system can be easily cleaned up with a CompositeDisposable
-    @subscriptions = new CompositeDisposable
+    @atomAlloyView.onCanceled(() => @alloy.canceled())
 
-    # Register command that toggles this view
+    # Register the commands
     @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:compile': => @compile()
     @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:execute': => @execute()
     @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:execute-all': => @executeAll()
     @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:visualize': => @visualize()
     @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:visualize-all': => @visualizeAll()
-
-  consumeStatusBar: (statusBar) ->
-    @atomAlloyView.consumeStatusBar(statusBar)
+    @subscriptions.add atom.commands.add 'atom-workspace', 'atom-alloy:cancel': => @cancel()
 
   deactivate: ->
     @subscriptions.dispose()
@@ -76,8 +74,11 @@ module.exports = AtomAlloy =
   serialize: ->
     atomAlloyState: @atomAlloyView.serialize()
 
+  # This function is required by status-bar module
+  consumeStatusBar: (statusBar) -> @atomAlloyView.consumeStatusBar(statusBar)
+
+  # Get a path of the active editor
   getActivePath: () ->
-    # Get a path of the active editor
     editor = atom.workspace.getActiveTextEditor()
     return editor?.getPath()
 
@@ -101,7 +102,6 @@ module.exports = AtomAlloy =
     @alloy.compile(path)
 
   executeCommandTemplate: (getCommands) ->
-    # TODO may be unreadable because event based callbacks are nested.
     callback = @alloy.onCompileDone((result) =>
       # Obtain the world instance
       world = result.result
@@ -119,7 +119,7 @@ module.exports = AtomAlloy =
     @compile()
 
   execute: ->
-    @executeCommandTemplate((world, callback)=>
+    @executeCommandTemplate((world, callback) =>
       # Select a command
       @selectCommand(world, (command) => callback([command]))
     )
@@ -153,3 +153,5 @@ module.exports = AtomAlloy =
     @visualizeCommandTemplate((world, callback) =>
       callback(@alloy.getCommands(world))
     )
+
+  cancel: -> @alloy.canceled()

@@ -7,25 +7,30 @@ class Alloy
   @compUtil: null
   @translateAlloyToKodkod: null
   @a4Options: null
+  @executerService: null
   emitter: null
   solver: null
   executedCommands: null
   commandQueue: null
+  currentCommand: null
 
+  # Launch JVM and add the classpath of alloy if it is not launched
   initializeIfNecessary: ->
-    # Launch JVM and add the classpath of alloy if it is not launched
-    if not Alloy.java?
-      # Initialize node-java
-      Alloy.java ?= require "java"
+    return if Alloy.java? # already initialized
 
-      # Load alloy jar file
-      Alloy.java.classpath.push(@alloyJarPath)
+    # Initialize node-java
+    Alloy.java ?= require "java"
 
-      # import the required class
-      Alloy.compUtil ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.parser.CompUtil")
-      Alloy.translateAlloyToKodkod ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod")
-      Alloy.a4Options ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.translator.A4Options")
+    # Load alloy jar file
+    Alloy.java.classpath.push(@alloyJarPath)
 
+    # Import the required class
+    Alloy.compUtil ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.parser.CompUtil")
+    Alloy.translateAlloyToKodkod ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod")
+    Alloy.a4Options ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.translator.A4Options")
+    Alloy.executerService ?= Alloy.java.callStaticMethodSync("java.util.concurrent.Executors", "newFixedThreadPool", 1)
+
+    # Set the solver
     switch @solver
       when "BerkMin"
         solver = Alloy.a4Options.SatSolver.BerkMinPIPE
@@ -40,24 +45,21 @@ class Alloy
       when "ZChaff"
         solver = Alloy.a4Options.SatSolver.ZChaffJNI
 
-    # make options
+    # Make options for executing
     @options = Alloy.java.newInstanceSync("edu.mit.csail.sdg.alloy4compiler.translator.A4Options")
     @options.solver = solver
 
   constructor: (@alloyJarPath, @solver, @tmpDirectory) ->
+    # Require the modules
     Emitter ?= require('atom').Emitter
     fs ?= require 'fs'
 
+    # Initialize the fields
     @emitter = new Emitter()
     @executedCommands = {}
     @commandQueue = []
 
-    @onCompileError(@executeNextCommandFromQueue)
-    @onCompileDone(@executeNextCommandFromQueue)
-
-    @onExecuteDone(@executeNextCommandFromQueue)
-    @onExecuteError(@executeNextCommandFromQueue)
-
+    # Make a temporary directory
     try
       fs.statSync(@tmpDirectory)
     catch error
@@ -78,22 +80,30 @@ class Alloy
     @initializeIfNecessary()
 
     # Add a command to the queue
-    @commandQueue.push( =>
-      @emitter.emit("CompileStarted", path)
-      # TODO should use A4Reporter, but node-java cannot generate a subclass of class (not interface)
-      Alloy.compUtil.parseEverything_fromFile(null, null, path, (err, result) =>
-        if err?
-          @emitter.emit("CompileError", {
-            path: path
-            err: err
-          })
-        else
-          @emitter.emit("CompileDone", {
-            path: path
-            result: result
-          })
-      )
-    )
+    @commandQueue.push(
+      =>
+        @emitter.emit("CompileStarted", path)
+        Alloy.executerService.submit(Alloy.java.newProxy("java.util.concurrent.Callable", {
+          call: =>
+            Alloy.compUtil.parseEverything_fromFile(null, null, path, (err, result) =>
+              try
+                if err?
+                  @emitter.emit("CompileError", {
+                    path: path
+                    err: err
+                  })
+                else
+                  @emitter.emit("CompileDone", {
+                    path: path
+                    result: result
+                  })
+              finally
+                @currentCommand = null
+                @executeNextCommandFromQueue()
+            )
+        }), (err, result) =>
+          if result? then @currentCommand ?= result
+      ))
     if @commandQueue.length == 1
       # Execute a command if there are no commands that are executing now
       @executeFromQueue()
@@ -118,32 +128,40 @@ class Alloy
 
     @commandQueue.push( =>
       @emitter.emit("ExecuteStarted", command)
-      Alloy.translateAlloyToKodkod.execute_command(
-        null, world.getAllReachableSigsSync(), command, @options,
-        (err, result) =>
-          if err?
-            @emitter.emit("ExecuteError", {
-              command: command
-              err: err
+      Alloy.executerService.submit(Alloy.java.newProxy("java.util.concurrent.Callable", {
+        call: =>
+          Alloy.translateAlloyToKodkod.execute_command(null, world.getAllReachableSigsSync(), command, @options, (err, result) =>
+            try
+              if err?
+                @emitter.emit("ExecuteError", {
+                  command: command
+                  err: err
+                })
+                return
+
+              if result.satisfiableSync()
+                # Store command, xml, and last updated time
+                lastModifiedTime = fs.statSync(path).mtime.getTime()
+
+                filename = "#{@tmpDirectory}/#{command.label}-#{new Date().getTime()}.xml"
+                # Save a solution to a xml file
+                result.writeXML(filename)
+                @executedCommands[serializedCommand] = {
+                  time: lastModifiedTime,
+                  filename: filename,
+                  solution: result
+                }
+
+              @emitter.emit("ExecuteDone", {
+                command: command
+                result: result
               })
-          else
-            if result.satisfiableSync()
-              # Store command, xml, and last updated time
-              lastModifiedTime = fs.statSync(path).mtime.getTime()
-
-              filename = "#{@tmpDirectory}/#{command.label}-#{new Date().getTime()}.xml"
-              # Save a solution to a xml file
-              result.writeXML(filename)
-              @executedCommands[serializedCommand] = {
-                time: lastModifiedTime,
-                filename: filename,
-                solution: result
-              }
-
-            @emitter.emit("ExecuteDone", {
-              command: command
-              result: result
-            })
+            finally
+              @currentCommand = null
+              @executeNextCommandFromQueue()
+          )
+      }), (err, result) =>
+          if result? then @currentCommand ?= result
       )
     )
 
@@ -189,6 +207,11 @@ class Alloy
 
   getCommands: (world) ->
     world.getAllCommandsSync().toArraySync()
+
+  canceled: () =>
+    return unless @currentCommand?
+    @currentCommand.cancelSync(true)
+    @executeNextCommandFromQueue()
 
   onCompileStarted: (callback) -> @emitter.on("CompileStarted", callback)
   onCompileError: (callback) -> @emitter.on("CompileError", callback)

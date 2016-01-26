@@ -13,3 +13,4 @@
   'ctrl-E': 'atom-alloy:execute-all'
   'ctrl-r': 'atom-alloy:visualize'
   'ctrl-R': 'atom-alloy:visualize-all'
+  'ctrl-q': 'atom-alloy:cancel'
