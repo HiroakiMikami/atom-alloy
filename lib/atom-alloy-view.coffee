@@ -1,4 +1,4 @@
-{Emitter} = require 'atom'
+Emitter = null
 
 module.exports =
 class AtomAlloyView
@@ -7,6 +7,10 @@ class AtomAlloyView
   cancelText: null
   emitter: null
   constructor: (serializedState) ->
+    # Require the module
+    Emitter = require('atom').Emitter
+
+    # Initialize DOMs
     @element = document.createElement("div")
     @element.is = "status-bar-atom-alloy"
     @element.className = "inline-block"
@@ -19,22 +23,18 @@ class AtomAlloyView
     @element.appendChild(@descriptionText)
     @element.appendChild(@cancelText)
 
+    # Initalize the field
     @emitter = new Emitter
 
+    # Add the event listener.
     handler = () =>
       @cancelText.style["display"] = "none"
       @descriptionText.innerText = ""
       @emitter.emit("Canceled")
-
     @cancelText.addEventListener("click", handler, true)
-
-  consumeStatusBar: (statusBar) ->
-    @statusBarTile = statusBar.addLeftTile(item: @element, priority: 100)
 
   # Returns an object that can be retrieved when package is activated
   serialize: ->
-
-  getFilename: (path) -> path.match(".+/(.+?)([\?#;].*)?$")[1]
 
   # Tear down any state and detach
   destroy: ->
@@ -42,6 +42,12 @@ class AtomAlloyView
     @cancelText.remove()
     @statusBarTile?.destroy()
     @emitter.dispose()
+
+  getFilename: (path) -> path.match(".+/(.+?)([\?#;].*)?$")[1]
+
+  consumeStatusBar: (statusBar) ->
+    # Add a tile to the status bar
+    @statusBarTile = statusBar.addLeftTile(item: @element, priority: 100)
 
   onCanceled: (callback) => @emitter.on("Canceled", callback)
 
