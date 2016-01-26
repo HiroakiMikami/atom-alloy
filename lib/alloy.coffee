@@ -85,7 +85,6 @@ class Alloy
         @emitter.emit("CompileStarted", path)
         Alloy.executerService.submit(Alloy.java.newProxy("java.util.concurrent.Callable", {
           call: =>
-            # TODO should use A4Reporter, but node-java cannot generate a subclass of class (not interface)
             Alloy.compUtil.parseEverything_fromFile(null, null, path, (err, result) =>
               try
                 if err?
