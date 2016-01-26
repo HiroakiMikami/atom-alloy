@@ -1,7 +1,7 @@
 {
   "name": "atom-alloy",
   "main": "./lib/atom-alloy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Alloy Analyzer and alloy language support for Atom editor.",
   "consumedServices": {
       "status-bar": {
