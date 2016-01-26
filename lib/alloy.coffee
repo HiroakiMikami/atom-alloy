@@ -52,12 +52,6 @@ class Alloy
     @executedCommands = {}
     @commandQueue = []
 
-    @onCompileError(@executeNextCommandFromQueue)
-    @onCompileDone(@executeNextCommandFromQueue)
-
-    @onExecuteDone(@executeNextCommandFromQueue)
-    @onExecuteError(@executeNextCommandFromQueue)
-
     try
       fs.statSync(@tmpDirectory)
     catch error
@@ -92,6 +86,7 @@ class Alloy
             path: path
             result: result
           })
+        @executeNextCommandFromQueue()
       )
     )
     if @commandQueue.length == 1
@@ -125,7 +120,7 @@ class Alloy
             @emitter.emit("ExecuteError", {
               command: command
               err: err
-              })
+            })
           else
             if result.satisfiableSync()
               # Store command, xml, and last updated time
@@ -144,6 +139,7 @@ class Alloy
               command: command
               result: result
             })
+          @executeNextCommandFromQueue()
       )
     )
 
