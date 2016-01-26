@@ -1,10 +1,29 @@
+{Emitter} = require 'atom'
+
 module.exports =
 class AtomAlloyView
   element: null
+  descriptionText: null
+  cancelText: null
+  emitter: null
   constructor: (serializedState) ->
     @element = document.createElement("div")
     @element.is = "status-bar-atom-alloy"
     @element.className = "inline-block"
+
+    @descriptionText = document.createElement("span")
+
+    @cancelText = document.createElement("a")
+    @cancelText.innerText = "(cancel)" # TODO I want to change this to an icon.
+
+    @element.appendChild(@descriptionText)
+    @element.appendChild(@cancelText)
+
+    @emitter = new Emitter
+
+    handler = () => @emitter.emit("Canceled")
+
+    @cancelText.addEventListener("click", handler, true)
 
   consumeStatusBar: (statusBar) ->
     @statusBarTile = statusBar.addLeftTile(item: @element, priority: 100)
@@ -17,28 +36,37 @@ class AtomAlloyView
   # Tear down any state and detach
   destroy: ->
     @element.remove()
+    @cancelText.remove()
     @statusBarTile?.destroy()
+    @emitter.dispose()
+
+  onCanceled: (callback) => @emitter.on("Canceled", callback)
 
   # Event callback functions
   compileStarted: (path) =>
-    @element.innerText = "Alloy4: compiling #{@getFilename(path)}..." if @element?
+    @cancelText.style["display"] = ""
+    @descriptionText.innerText = "Alloy4: compiling #{@getFilename(path)}..." if @element?
   compileError: (result) =>
     atom.notifications.addError("Atom Alloy", {
       detail: @getErrorMessage(result.err)
     })
-    @element.innerText = ""
+    @cancelText.style["display"] = "none"
+    @descriptionText.innerText = ""
   compileDone: (result) =>
     atom.notifications.addSuccess("Atom Alloy", {
       detail: "succeed in compiling #{@getFilename(result.path)}"
     })
-    @element.innerText = ""
+    @cancelText.style["display"] = "none"
+    @descriptionText.innerText = ""
   executeStarted: (command) =>
-    @element.innerText = "Alloy4: executing #{command.label}..." if @element?
+    @cancelText.style["display"] = ""
+    @descriptionText.innerText = "Alloy4: executing #{command.label}..." if @element?
   executeError: (result) =>
     atom.notifications.addError("Atom Alloy", {
       detail: @getErrorMessage(result.err)
     })
-    @element.innerText = ""
+    @cancelText.style["display"] = "none"
+    @descriptionText.innerText = ""
   executeDone: (result) =>
     solution = result.result
     satisfiable = solution.satisfiableSync() # TODO Java method is called outside of Alloy class
@@ -66,7 +94,8 @@ class AtomAlloyView
       atom.notifications.addInfo("Atom Alloy #{result.command.label}", {
         detail: "#{message}"
       })
-    @element.innerText = ""
+    @cancelText.style["display"] = "none"
+    @descriptionText.innerText = ""
 
   getErrorMessage: (err) ->
     # extract error message from result.err
