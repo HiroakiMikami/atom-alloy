@@ -14,22 +14,23 @@ class Alloy
   commandQueue: null
   currentCommand: null
 
+  # Launch JVM and add the classpath of alloy if it is not launched
   initializeIfNecessary: ->
-    # Launch JVM and add the classpath of alloy if it is not launched
-    if not Alloy.java?
-      # Initialize node-java
-      Alloy.java ?= require "java"
+    return if Alloy.java? # already initialized
 
-      # Load alloy jar file
-      Alloy.java.classpath.push(@alloyJarPath)
+    # Initialize node-java
+    Alloy.java ?= require "java"
 
-      # import the required class
-      Alloy.compUtil ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.parser.CompUtil")
-      Alloy.translateAlloyToKodkod ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod")
-      Alloy.a4Options ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.translator.A4Options")
+    # Load alloy jar file
+    Alloy.java.classpath.push(@alloyJarPath)
 
-      Alloy.executerService ?= Alloy.java.callStaticMethodSync("java.util.concurrent.Executors", "newFixedThreadPool", 1)
+    # Import the required class
+    Alloy.compUtil ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.parser.CompUtil")
+    Alloy.translateAlloyToKodkod ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod")
+    Alloy.a4Options ?= Alloy.java.import("edu.mit.csail.sdg.alloy4compiler.translator.A4Options")
+    Alloy.executerService ?= Alloy.java.callStaticMethodSync("java.util.concurrent.Executors", "newFixedThreadPool", 1)
 
+    # Set the solver
     switch @solver
       when "BerkMin"
         solver = Alloy.a4Options.SatSolver.BerkMinPIPE
@@ -44,18 +45,21 @@ class Alloy
       when "ZChaff"
         solver = Alloy.a4Options.SatSolver.ZChaffJNI
 
-    # make options
+    # Make options for executing
     @options = Alloy.java.newInstanceSync("edu.mit.csail.sdg.alloy4compiler.translator.A4Options")
     @options.solver = solver
 
   constructor: (@alloyJarPath, @solver, @tmpDirectory) ->
+    # Require the modules
     Emitter ?= require('atom').Emitter
     fs ?= require 'fs'
 
+    # Initialize the fields
     @emitter = new Emitter()
     @executedCommands = {}
     @commandQueue = []
 
+    # Make a temporary directory
     try
       fs.statSync(@tmpDirectory)
     catch error
