@@ -112,16 +112,18 @@ class Alloy
     not (result? && (lastModifiedTime >= result.time))
 
   executeCommandIfNecessary: (path, world, command) ->
-    # This command is already executed.
-    return if not @isExecuteCommandRequired(path, command)
-
-    serializedCommand = "#{path}/#{command.label}"
-    result = @executedCommands[serializedCommand]
-    if result? then fs.unlink(result.filename)
-
-    delete @executeCommands[serializedCommand]
-
     @promise.then((succeeded, rejected) =>
+      # This command is already executed.
+      if not @isExecuteCommandRequired(path, command)
+        succeeded()
+        return
+
+      serializedCommand = "#{path}/#{command.label}"
+      result = @executedCommands[serializedCommand]
+      if result? then fs.unlink(result.filename)
+
+      delete @executeCommands[serializedCommand]
+
       @emitter.emit("ExecuteStarted", command)
       callable = Alloy.java.newProxy("java.util.concurrent.Callable", {
         call: =>
@@ -168,7 +170,8 @@ class Alloy
   visualizeCommand: (path, world, command) =>
     serializedCommand = "#{path}/#{command.label}"
 
-    visualize = (succeeded, rejected) =>
+    @executeCommandIfNecessary(path, world, command)
+    @promise.ifSucceeded((succeeded, rejected) =>
       try
         result = @executedCommands[serializedCommand]
         return unless result?
@@ -186,12 +189,7 @@ class Alloy
           false, result.filename, null, null, evaluator)
       finally
         succeeded()
-
-    if @isExecuteCommandRequired(path, command)
-      @executeCommandIfNecessary(path, world, command)
-      @promise.ifSucceeded(visualize)
-    else
-      @promise.then(visualize)
+    )
 
   getCommands: (world) ->
     world.getAllCommandsSync().toArraySync()
