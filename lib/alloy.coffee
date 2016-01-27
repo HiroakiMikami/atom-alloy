@@ -1,4 +1,5 @@
 Emitter = null
+PromiseWithJava = null
 fs = null
 
 module.exports =
@@ -11,7 +12,7 @@ class Alloy
   emitter: null
   solver: null
   executedCommands: null
-  commandQueue: null
+  promise: null
   currentCommand: null
 
   # Launch JVM and add the classpath of alloy if it is not launched
@@ -53,11 +54,12 @@ class Alloy
     # Require the modules
     Emitter ?= require('atom').Emitter
     fs ?= require 'fs'
+    PromiseWithJava ?= require('./promise-with-java')
 
     # Initialize the fields
     @emitter = new Emitter()
+    @promise = new PromiseWithJava()
     @executedCommands = {}
-    @commandQueue = []
 
     # Make a temporary directory
     try
@@ -69,44 +71,37 @@ class Alloy
     @emitter.dispose()
     @executedCommands = {}
     fs.unlink(@tmpDirectory)
-    @commandQueue = null
-
-  executeFromQueue: => @commandQueue[0]?()
-  executeNextCommandFromQueue: =>
-    @commandQueue.shift()
-    if @commandQueue.length > 0 then @executeFromQueue()
+    @promise.destroy()
+    @promise = null
 
   compile: (path) ->
     @initializeIfNecessary()
 
     # Add a command to the queue
-    @commandQueue.push(
-      =>
-        @emitter.emit("CompileStarted", path)
-        Alloy.executerService.submit(Alloy.java.newProxy("java.util.concurrent.Callable", {
-          call: =>
-            Alloy.compUtil.parseEverything_fromFile(null, null, path, (err, result) =>
-              try
-                if err?
-                  @emitter.emit("CompileError", {
-                    path: path
-                    err: err
-                  })
-                else
-                  @emitter.emit("CompileDone", {
-                    path: path
-                    result: result
-                  })
-              finally
-                @currentCommand = null
-                @executeNextCommandFromQueue()
-            )
-        }), (err, result) =>
-          if result? then @currentCommand ?= result
-      ))
-    if @commandQueue.length == 1
-      # Execute a command if there are no commands that are executing now
-      @executeFromQueue()
+    @promise.then((succeeded, rejected) =>
+      @emitter.emit("CompileStarted", path)
+      callable = Alloy.java.newProxy("java.util.concurrent.Callable", {
+        call: =>
+          Alloy.compUtil.parseEverything_fromFile(null, null, path, (err, result) =>
+            try
+              if err?
+                @emitter.emit("CompileError", {
+                  path: path
+                  err: err
+                })
+                rejected(err)
+              else
+                @emitter.emit("CompileDone", {
+                  path: path
+                  result: result
+                })
+                succeeded(result)
+            finally
+              @currentCommand = null
+          )
+      })
+      Alloy.executerService.submit(callable, (err, result) => if result? then @currentCommand ?= result)
+    )
 
   isExecuteCommandRequired: (path, command) ->
     lastModifiedTime = fs.statSync(path).mtime.getTime()
@@ -126,9 +121,9 @@ class Alloy
 
     delete @executeCommands[serializedCommand]
 
-    @commandQueue.push( =>
+    @promise.then((succeeded, rejected) =>
       @emitter.emit("ExecuteStarted", command)
-      Alloy.executerService.submit(Alloy.java.newProxy("java.util.concurrent.Callable", {
+      callable = Alloy.java.newProxy("java.util.concurrent.Callable", {
         call: =>
           Alloy.translateAlloyToKodkod.execute_command(null, world.getAllReachableSigsSync(), command, @options, (err, result) =>
             try
@@ -137,8 +132,8 @@ class Alloy
                   command: command
                   err: err
                 })
+                rejected(err)
                 return
-
               if result.satisfiableSync()
                 # Store command, xml, and last updated time
                 lastModifiedTime = fs.statSync(path).mtime.getTime()
@@ -156,18 +151,15 @@ class Alloy
                 command: command
                 result: result
               })
+              succeeded(result)
             finally
               @currentCommand = null
-              @executeNextCommandFromQueue()
           )
-      }), (err, result) =>
+      })
+      Alloy.executerService.submit(callable, (err, result) =>
           if result? then @currentCommand ?= result
       )
     )
-
-    if @commandQueue.length == 1
-      # Execute a command if there are no commands that are executing now
-      @executeFromQueue()
 
   executeCommands: (path, world, commands) ->
     for command in commands
@@ -176,7 +168,7 @@ class Alloy
   visualizeCommand: (path, world, command) =>
     serializedCommand = "#{path}/#{command.label}"
 
-    visualize = () =>
+    visualize = (succeeded, rejected) =>
       try
         result = @executedCommands[serializedCommand]
         return unless result?
@@ -189,21 +181,17 @@ class Alloy
             else
               return input + ""
         })
-
         Alloy.java.newInstance(
           "edu.mit.csail.sdg.alloy4viz.VizGUI",
           false, result.filename, null, null, evaluator)
       finally
-        @executeNextCommandFromQueue()
+        succeeded()
 
     if @isExecuteCommandRequired(path, command)
       @executeCommandIfNecessary(path, world, command)
-
-    @commandQueue.push(visualize)
-
-    if @commandQueue.length == 1
-      # Execute a command if there are no commands that are executing now
-      @executeFromQueue()
+      @promise.ifSucceeded(visualize)
+    else
+      @promise.then(visualize)
 
   getCommands: (world) ->
     world.getAllCommandsSync().toArraySync()
@@ -211,7 +199,7 @@ class Alloy
   canceled: () =>
     return unless @currentCommand?
     @currentCommand.cancelSync(true)
-    @executeNextCommandFromQueue()
+    @promise.cancelCurrentTask()
 
   onCompileStarted: (callback) -> @emitter.on("CompileStarted", callback)
   onCompileError: (callback) -> @emitter.on("CompileError", callback)
