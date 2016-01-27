@@ -77,30 +77,18 @@ class Alloy
   compile: (path) ->
     @initializeIfNecessary()
 
-    # Add a command to the queue
-    @promise.then((succeeded, rejected) =>
-      @emitter.emit("CompileStarted", path)
-      callable = Alloy.java.newProxy("java.util.concurrent.Callable", {
-        call: =>
-          Alloy.compUtil.parseEverything_fromFile(null, null, path, (err, result) =>
-            try
-              if err?
-                @emitter.emit("CompileError", {
-                  path: path
-                  err: err
-                })
-                rejected(err)
-              else
-                @emitter.emit("CompileDone", {
-                  path: path
-                  result: result
-                })
-                succeeded(result)
-            finally
-              @currentCommand = null
-          )
-      })
-      Alloy.executerService.submit(callable, (err, result) => if result? then @currentCommand ?= result)
+    @emitter.emit("CompileStarted", path)
+    Alloy.compUtil.parseEverything_fromFile(null, null, path, (err, result) =>
+      if err?
+          @emitter.emit("CompileError", {
+            path: path
+            err: err
+          })
+      else
+        @emitter.emit("CompileDone", {
+            path: path
+          result: result
+        })
     )
 
   isExecuteCommandRequired: (path, command) ->

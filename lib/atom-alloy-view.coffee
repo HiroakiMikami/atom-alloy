@@ -53,7 +53,7 @@ class AtomAlloyView
 
   # Event callback functions
   compileStarted: (path) =>
-    @cancelText.style["display"] = ""
+    @cancelText.style["display"] = "none"
     @descriptionText.innerText = "Alloy4: compiling #{@getFilename(path)}..." if @element?
   compileError: (result) =>
     atom.notifications.addError("Atom Alloy", {
