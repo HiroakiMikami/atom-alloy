@@ -1,15 +1,15 @@
 {
   "name": "atom-alloy",
   "main": "./lib/atom-alloy",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Alloy Analyzer and alloy language support for Atom editor.",
   "consumedServices": {
-      "status-bar": {
-        "versions": {
-          "^1.0.0": "consumeStatusBar"
-        }
+    "status-bar": {
+      "versions": {
+        "^1.0.0": "consumeStatusBar"
       }
-    },
+    }
+  },
   "keywords": [
     "alloy"
   ],
@@ -22,12 +22,11 @@
       "atom-alloy:visualize-all"
     ]
   },
-  "repository": "https://github.com/HiroakiMikami/atom-alloy",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/HiroakiMikami/atom-alloy.git"
   },
+  "license": "MIT",
   "readmeFilename": "README.md",
   "bugs": {
     "url": "https://github.com/HiroakiMikami/atom-alloy/issues"
