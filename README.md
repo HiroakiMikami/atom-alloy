@@ -1,6 +1,6 @@
 # atom-alloy
 ## Overview
-![](atom-alloy.gif)
+![](http://hiroakimikami.github.io/atom-alloy/atom-alloy.gif)
 
 This repository is an atom package for [alloy modeling language](http://alloy.mit.edu/alloy/index.html). This package provides highlight syntax for Alloy files and enables to compile, execute, and visualize an alloy source code.
 
